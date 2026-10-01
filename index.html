@@ -43,9 +43,12 @@
   .aviso b{display:block;font-size:16px;margin-bottom:4px}
 
   /* leitura do QR */
-  .camera{position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:3/4;border:2px solid var(--bd)}
+  .camera{position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:4/3;border:2px solid var(--bd)}
   .camera video{width:100%;height:100%;object-fit:cover;display:block}
-  .camera .mira{position:absolute;inset:18% 14%;border:3px solid rgba(216,180,143,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+  .camera .mira{position:absolute;inset:26% 7%;border:3px solid rgba(216,180,143,.9);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+  .linha-busca{display:flex;gap:8px}.linha-busca .in{flex:1;font:800 22px var(--mono);letter-spacing:.02em}.linha-busca .btn{width:auto;padding:0 18px}
+  .opcao{display:block;width:100%;text-align:left;background:var(--p2);border:1.5px solid var(--bd);border-radius:14px;padding:12px 14px;margin-top:10px}
+  .opcao b{font:800 20px var(--mono);display:block}.opcao span{color:var(--mut);font-size:13.5px}
   .camera .msg{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:13.5px;font-weight:600;text-shadow:0 1px 6px #000}
   .alternativas{display:flex;gap:10px}
   .alternativas .btn{font-size:14px;min-height:48px;padding:10px}
@@ -105,32 +108,40 @@
     </details>
   </section>
 
-  <!-- LER QR -->
+  <!-- ACHAR A DEVOLUÇÃO: nº digitado ou etiqueta de rastreio bipada (sem etiqueta QR) -->
   <section id="telaLer" class="oculto">
-    <div class="camera"><video id="video" playsinline muted></video><div class="mira"></div><div class="msg" id="camMsg">Aponte para o QR da etiqueta da devolução</div></div>
     <div id="lerErro" class="aviso err oculto"></div>
-    <div class="alternativas">
-      <label class="btn sec">📷 Ler por foto<input id="qrFoto" type="file" accept="image/*" capture="environment" hidden></label>
-      <button class="btn sec" id="btnDigitar" type="button">⌨️ Digitar código</button>
+    <div class="cartao">
+      <label class="campo" style="margin-bottom:0"><span>Nº da devolução ou código da etiqueta</span>
+        <div class="linha-busca"><input class="in" id="codDigitado" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Ex.: 125"><button class="btn pri" id="btnCodigo" type="button">Procurar</button></div>
+      </label>
     </div>
-    <div id="digitar" class="cartao oculto">
-      <label class="campo"><span>Código impresso embaixo do QR (ex.: DEV-000125 A1B2C3)</span><input class="in" id="codDigitado" autocapitalize="characters" autocomplete="off"></label>
-      <button class="btn pri" id="btnCodigo" type="button">Procurar</button>
-    </div>
+    <div class="camera"><video id="video" playsinline muted></video><div class="mira"></div><div class="msg" id="camMsg">Ou aponte para o código de barras do rastreio</div></div>
+    <label class="btn sec">📷 Ler a etiqueta por foto<input id="qrFoto" type="file" accept="image/*" capture="environment" hidden></label>
     <p class="fila oculto" id="filaLer"></p>
+  </section>
+
+  <!-- ESCOLHER (o mesmo pedido tem mais de uma devolução) -->
+  <section id="telaEscolher" class="oculto">
+    <div class="cartao">
+      <h2>Este código tem mais de uma devolução</h2>
+      <div class="rodape" style="text-align:left">Escolha a que está na sua frente.</div>
+      <div id="listaOpcoes"></div>
+    </div>
+    <button class="btn sec" id="btnVoltarEscolha" type="button">Voltar</button>
   </section>
 
   <!-- CONFIRMAR -->
   <section id="telaConfirmar" class="oculto">
     <div class="cartao">
       <div class="rodape" style="text-align:left">Confira se é a devolução que está na sua frente</div>
-      <div class="dev-id" id="cId"></div>
+      <div class="dev-id" id="cId"></div><div class="rodape" style="text-align:left" id="cNumero"></div>
       <div class="dev-dados" id="cDados"></div>
       <ul class="produtos" id="cProdutos"></ul>
     </div>
     <div id="cBloqueio" class="aviso err oculto"></div>
     <button class="btn ok" id="btnConfirmar" type="button">✅ É esta devolução</button>
-    <button class="btn sec" id="btnOutra" type="button">Não é — ler outro QR</button>
+    <button class="btn sec" id="btnOutra" type="button">Não é — procurar outra</button>
   </section>
 
   <!-- FOTOS -->
@@ -171,7 +182,7 @@ let tipoAtual = '';
 const minhas = [];          // fotos desta sessão (para a galeria)
 
 function tela(nome) {
-  ['Login', 'Ler', 'Confirmar', 'Fotos'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
+  ['Login', 'Ler', 'Escolher', 'Confirmar', 'Fotos'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
   $('quem').innerHTML = sessao.nome && nome !== 'Login' ? esc(sessao.nome) + '<br><button type="button" id="btnSair">sair</button>' : '';
   if ($('btnSair')) $('btnSair').onclick = () => { localStorage.removeItem(K.pin); sessao.pin = ''; pararCamera(); abrirLogin(); };
   if (nome !== 'Ler') pararCamera();
@@ -231,90 +242,145 @@ function mostrarErroLogin(m) { $('lErro').textContent = m; $('lErro').classList.
 $('lApiSalvar').onclick = () => { const v = $('lApi').value.trim(); if (v) localStorage.setItem(K.api, v); else localStorage.removeItem(K.api); abrirLogin(); };
 
 // =====================================================================
-// LEITURA DO QR (câmera ao vivo; alternativas: foto do QR ou digitar)
+// ACHAR A DEVOLUÇÃO — sem etiqueta QR: o operador digita o nº da devolução (ex.: 125)
+// ou bipa com a câmera a etiqueta de rastreio da caixa. Mesmo leitor do bipador da
+// expedição: nativo do Android (BarcodeDetector) e, sem ele (iPhone), ZXing.
 // =====================================================================
-let stream = null, laco = null, detector = null, lendo = false;
+const ZXING_URL = 'https://unpkg.com/@zxing/library@0.21.0/umd/index.min.js';
+const FORMATOS = ['code_128', 'qr_code', 'data_matrix', 'code_39', 'itf', 'ean_13', 'pdf417'];
+let stream = null, laco = null, lendo = false, motor = '', detector = null, leitorZX = null;
+const canvasCap = document.createElement('canvas'), ctxCap = canvasCap.getContext('2d', { willReadFrequently: true });
+let quadro = 0;
+
+// Só aceita da câmera o que é código logístico (a etiqueta também tem CEP e outros códigos)
+function codigoUtil(texto) {
+  let s = String(texto || '').trim();
+  if (/^DCDEV:/i.test(s)) return s;                                   // QR antigo
+  if (s.charAt(0) === '{') { try { const j = JSON.parse(s); if (j && (j.id || j.shipment_id)) return String(j.id || j.shipment_id); } catch (e) {} }
+  const d = s.replace(/[\s.\-]/g, '');
+  if (/^\d{44}$/.test(d)) return d;                                   // chave do DANFE
+  const m = s.match(/BR[A-Z0-9]{8,20}|(AMZC?|TBA)[A-Z0-9]{8,20}|(MEL|MLB)[A-Z0-9]{8,24}/i);
+  if (m) return m[0].toUpperCase();
+  if (/^4\d{10}$/.test(d)) return d;                                  // nº do envio do Mercado Livre
+  return '';
+}
+function escolher(lista) {
+  let melhor = '', nota = -1;
+  (lista || []).forEach(l => {
+    const c = codigoUtil(l.texto); if (!c) return;
+    const n = (/^(BR|AMZ|TBA|MEL|MLB)/.test(c) ? 10 : 0) + (/qr|data_matrix|pdf/i.test(l.formato || '') ? 0 : 5);
+    if (n > nota) { nota = n; melhor = c; }
+  });
+  return melhor;
+}
+function carregarScript(src) {
+  return new Promise((ok, erro) => { if (window.ZXing) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = erro; document.head.appendChild(s); });
+}
+function criarLeitorZXing(Z) {
+  const F = Z.BarcodeFormat, h = new Map();
+  h.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.CODE_128, F.CODE_39, F.ITF, F.EAN_13, F.QR_CODE, F.DATA_MATRIX]);
+  h.set(Z.DecodeHintType.TRY_HARDER, true);
+  const r = new Z.MultiFormatReader(); r.setHints(h);
+  return img => {
+    const n = img.width * img.height, px = img.data, lum = new Uint8ClampedArray(n);
+    for (let i = 0, j = 0; i < n; i++, j += 4) lum[i] = (px[j] * 77 + px[j + 1] * 150 + px[j + 2] * 29) >> 8;
+    try { const res = r.decodeWithState(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.RGBLuminanceSource(lum, img.width, img.height)))); return [{ texto: res.getText(), formato: F[res.getBarcodeFormat()] }]; }
+    catch (e) { return []; }
+  };
+}
+async function prepararMotor() {
+  if (motor) return motor;
+  if ('BarcodeDetector' in window) {
+    try {
+      const sup = await BarcodeDetector.getSupportedFormats(), f = FORMATOS.filter(x => sup.indexOf(x) !== -1);
+      if (f.indexOf('code_128') !== -1) { detector = new BarcodeDetector({ formats: f }); return (motor = 'nativo'); }
+    } catch (e) {}
+  }
+  await carregarScript(ZXING_URL);
+  if (!window.ZXing) throw new Error('leitor indisponível');
+  leitorZX = criarLeitorZXing(window.ZXing);
+  return (motor = 'zxing');
+}
+// recorte da moldura (menos pixels = mais rápido); a cada 3 quadros, girado 90° para etiqueta de lado
+function recorte(fonte, w0, h0, inteiro, girar) {
+  const cw = inteiro ? w0 : Math.round(w0 * 0.9), ch = inteiro ? h0 : Math.round(h0 * 0.6);
+  const sx = Math.round((w0 - cw) / 2), sy = Math.round((h0 - ch) / 2), k = Math.min(1, (inteiro ? 1400 : 960) / cw);
+  const w = Math.round(cw * k), h = Math.round(ch * k);
+  canvasCap.width = girar ? h : w; canvasCap.height = girar ? w : h;
+  if (girar) { ctxCap.setTransform(0, 1, -1, 0, h, 0); ctxCap.drawImage(fonte, sx, sy, cw, ch, 0, 0, w, h); ctxCap.setTransform(1, 0, 0, 1, 0, 0); }
+  else ctxCap.drawImage(fonte, sx, sy, cw, ch, 0, 0, w, h);
+  return ctxCap.getImageData(0, 0, canvasCap.width, canvasCap.height);
+}
+async function lerQuadro(fonte, w0, h0, inteiro) {
+  if (motor === 'nativo') return (await detector.detect(fonte)).map(c => ({ texto: c.rawValue, formato: c.format }));
+  if (motor === 'zxing') {
+    let r = leitorZX(recorte(fonte, w0, h0, inteiro, false));
+    if (!escolher(r) && (inteiro || quadro++ % 3 === 2)) r = r.concat(leitorZX(recorte(fonte, w0, h0, inteiro, true)));
+    return r;
+  }
+  return [];
+}
+
 async function abrirLeitura(erro) {
   tela('Ler');
-  $('digitar').classList.add('oculto');
+  $('codDigitado').value = '';
   $('lerErro').classList.toggle('oculto', !erro);
   if (erro) $('lerErro').innerHTML = erro;
-  $('camMsg').textContent = 'Aponte para o QR da etiqueta da devolução';
+  $('camMsg').textContent = 'Ou aponte para o código de barras do rastreio';
   lendo = false;
   try {
-    if ('BarcodeDetector' in window) {
-      try { const f = await BarcodeDetector.getSupportedFormats(); if (f.indexOf('qr_code') !== -1) detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) {}
-    }
-    if (!detector) await carregarJsQR();
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    await prepararMotor();
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
     const v = $('video'); v.srcObject = stream; await v.play();
-    const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
     laco = setInterval(async () => {
-      if (lendo || !v.videoWidth) return;
-      try {
-        let texto = '';
-        if (detector) { const r = await detector.detect(v); if (r && r[0]) texto = r[0].rawValue; }
-        else if (window.jsQR) {
-          const w = 640, h = Math.round(v.videoHeight * 640 / v.videoWidth);
-          canvas.width = w; canvas.height = h; ctx.drawImage(v, 0, 0, w, h);
-          const r = window.jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
-          if (r) texto = r.data;
-        }
-        if (texto) aoLerQR(texto);
-      } catch (e) {}
-    }, 180);
+      if (lendo || !v.videoWidth || document.hidden) return;
+      try { const c = escolher(await lerQuadro(v, v.videoWidth, v.videoHeight, false)); if (c) aoLer(c); } catch (e) {}
+    }, motor === 'nativo' ? 120 : 250);
   } catch (e) {
-    $('camMsg').textContent = 'Câmera indisponível — use "Ler por foto" ou "Digitar código"';
+    $('camMsg').textContent = 'Câmera indisponível — digite o nº acima ou use "Ler a etiqueta por foto"';
   }
 }
 function pararCamera() {
   clearInterval(laco); laco = null;
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 }
-let jsqrCarregando = null;
-function carregarJsQR() {
-  if (window.jsQR) return Promise.resolve();
-  if (!jsqrCarregando) jsqrCarregando = new Promise(ok => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'; s.onload = ok; s.onerror = ok; document.head.appendChild(s); });
-  return jsqrCarregando;
-}
 $('qrFoto').onchange = async e => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f) return;
-  $('camMsg').textContent = 'Lendo a foto do QR…';
+  $('camMsg').textContent = 'Lendo a foto da etiqueta…';
   try {
+    await prepararMotor();
     const bmp = await createImageBitmap(f);
-    let texto = '';
-    if (detector) { const r = await detector.detect(bmp); if (r && r[0]) texto = r[0].rawValue; }
-    if (!texto) {
-      await carregarJsQR();
-      const c = document.createElement('canvas'), k = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
-      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-      const cx = c.getContext('2d'); cx.drawImage(bmp, 0, 0, c.width, c.height);
-      const r = window.jsQR ? window.jsQR(cx.getImageData(0, 0, c.width, c.height).data, c.width, c.height) : null;
-      if (r) texto = r.data;
-    }
-    if (texto) aoLerQR(texto); else abrirLeitura('<b>Não achei um QR nessa foto.</b>Chegue mais perto do QR, com boa luz, e tente de novo.');
+    const c = escolher(await lerQuadro(bmp, bmp.width, bmp.height, true));
+    if (c) aoLer(c); else abrirLeitura('<b>Não achei o código do rastreio nessa foto.</b>Chegue mais perto do código de barras, com boa luz, ou digite o nº da devolução.');
   } catch (err) { abrirLeitura('<b>Não consegui ler a foto.</b>' + esc(err.message || '')); }
 };
-$('btnDigitar').onclick = () => { $('digitar').classList.toggle('oculto'); $('codDigitado').focus(); };
-$('btnCodigo').onclick = () => { const v = $('codDigitado').value.trim(); if (v) aoLerQR(v); };
+$('btnCodigo').onclick = () => { const v = $('codDigitado').value.trim(); if (v) aoLer(v); else $('codDigitado').focus(); };
 $('codDigitado').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnCodigo').click(); });
 
-async function aoLerQR(texto) {
+async function aoLer(texto) {
   if (lendo) return;
   lendo = true;
   if (navigator.vibrate) navigator.vibrate(60);
-  $('camMsg').innerHTML = '<span class="gira">⏳</span> Conferindo…';
+  $('camMsg').innerHTML = '<span class="gira">⏳</span> Procurando…';
   try {
-    const r = await chamar({ action: 'devFotoInfo', qr: texto, operador: sessao.nome, pin: sessao.pin }, 25000);
+    const r = await chamar({ action: 'devFotoInfo', codigo: texto, operador: sessao.nome, pin: sessao.pin }, 25000);
+    if (r.status === 'varios') { mostrarOpcoes(r); return; }
     if (r.status !== 'ok') {
       if (r.codigo === 'pin') { abrirLogin(); mostrarErroLogin(r.msg); return; }
-      abrirLeitura('<b>' + (r.codigo === 'qr' ? 'QR não reconhecido' : r.codigo === 'inexistente' ? 'Devolução não encontrada' : 'Não deu certo') + '</b>' + esc(r.msg));
+      abrirLeitura('<b>' + (r.codigo === 'nao_encontrada' ? 'Devolução não encontrada' : r.codigo === 'qr' ? 'Código não reconhecido' : 'Não deu certo') + '</b>' + esc(r.msg));
       return;
     }
     mostrarConfirmacao(r);
   } catch (e) { abrirLeitura('<b>Sem conexão</b>' + esc(e.message) + ' Tente de novo.'); }
 }
+function mostrarOpcoes(r) {
+  tela('Escolher');
+  $('listaOpcoes').innerHTML = r.opcoes.map(o => '<button type="button" class="opcao" data-id="' + esc(o.id) + '"><b>' + esc(o.id) + '</b><span>' +
+    esc([o.status, o.pedido ? 'Pedido ' + o.pedido : '', o.cliente, o.criadoEm].filter(Boolean).join(' · ')) + (o.motivo ? '<br>' + esc(o.motivo) : '') + '</span></button>').join('');
+  $('listaOpcoes').querySelectorAll('[data-id]').forEach(b => b.onclick = () => { lendo = false; aoLer(b.dataset.id); });
+}
+$('btnVoltarEscolha').onclick = () => abrirLeitura();
 
 // =====================================================================
 // CONFIRMAR A DEVOLUÇÃO (antes de qualquer foto)
@@ -322,6 +388,7 @@ async function aoLerQR(texto) {
 function mostrarConfirmacao(r) {
   tela('Confirmar');
   $('cId').textContent = r.id;
+  $('cNumero').textContent = r.numero ? 'nº ' + r.numero : '';
   const linha = (rot, v) => v ? '<div><span>' + rot + '</span><b>' + esc(v) + '</b></div>' : '';
   $('cDados').innerHTML = linha('Pedido', r.pedido) + linha('Loja', r.marketplace) + linha('Cliente', r.cliente) + linha('Situação', r.situacao) + linha('Fotos já registradas', String(r.fotos.length));
   $('cProdutos').innerHTML = r.produtos.map(p => '<li>📦 ' + esc(p.produto) + ' — <b>' + p.qtd + ' un</b></li>').join('');
@@ -358,7 +425,7 @@ $('camera').onchange = async e => {
   for (const f of arquivos) {
     try {
       const imagem = await reduzir(f);
-      const item = { fotoId: novoId(), qr: dev.qr, devId: dev.id, tipo: tipoAtual, imagem: imagem, criadaEm: Date.now(), tentativas: 0, estado: 'pendente', erro: '' };
+      const item = { fotoId: novoId(), devId: dev.id, tipo: tipoAtual, imagem: imagem, criadaEm: Date.now(), tentativas: 0, estado: 'pendente', erro: '' };
       await fila.salvar(item);
       minhas.unshift({ fotoId: item.fotoId, devId: item.devId, tipo: item.tipo, mini: await miniatura(imagem), estado: 'pendente', msg: 'na fila' });
       desenharGaleria();
@@ -435,7 +502,7 @@ async function processarFila() {
       marcar(item.fotoId, 'pendente', 'enviando…');
       let r;
       try {
-        r = await chamar({ action: 'devFotoEnviar', qr: item.qr, operador: sessao.nome, pin: sessao.pin, fotoId: item.fotoId, tipo: item.tipo, imagem: item.imagem, aparelho: aparelho() }, 90000);
+        r = await chamar({ action: 'devFotoEnviar', id: item.devId, qr: item.qr || '', operador: sessao.nome, pin: sessao.pin, fotoId: item.fotoId, tipo: item.tipo, imagem: item.imagem, aparelho: aparelho() }, 90000);
       } catch (e) {                                            // sem internet / servidor lento: tenta de novo sozinho
         item.tentativas++; await fila.salvar(item);
         marcar(item.fotoId, 'pendente', 'aguardando internet');
