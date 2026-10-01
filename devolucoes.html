@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13100e">
+<title>Fotos de devolução — D Coração Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#13100e;--p1:#1c1611;--p2:#241c16;--bd:#3a2c21;--brand:#B08662;--brand2:#D8B48F;--tx:#F3EAE0;--mut:#9C8A78;--ok:#6FBF7F;--err:#D9584B;--warn:#E5A93C;--mono:'JetBrains Mono',ui-monospace,monospace}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--tx);font:15px/1.45 'Inter',system-ui,sans-serif;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+  button,input,select{font:inherit;color:inherit}
+  button{cursor:pointer}
+  .oculto{display:none!important}
+  .gira{display:inline-block;animation:gira .9s linear infinite}@keyframes gira{to{transform:rotate(360deg)}}
+  header{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--bd);background:var(--p1)}
+  header .logo{width:34px;height:34px;border-radius:9px;background:rgba(176,134,98,.15);border:1px solid rgba(176,134,98,.45);color:var(--brand);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px}
+  header h1{font-size:15px;font-weight:800;line-height:1.1}
+  header h1 small{display:block;font-size:11.5px;font-weight:500;color:var(--mut)}
+  header .quem{margin-left:auto;text-align:right;font-size:12px;color:var(--mut)}
+  header .quem button{background:none;border:0;color:var(--brand2);font-size:12px;text-decoration:underline}
+  main{flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;max-width:560px;width:100%;margin:0 auto}
+  .cartao{background:var(--p1);border:1px solid var(--bd);border-radius:16px;padding:16px}
+  .cartao h2{font-size:17px;margin-bottom:10px}
+  .campo{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+  .campo span{font-size:13px;color:var(--mut);font-weight:600}
+  .in{background:var(--bg);border:1.5px solid var(--bd);border-radius:12px;padding:13px 14px;font-size:17px;width:100%;outline:none}
+  .in:focus{border-color:var(--brand)}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:1.5px solid var(--bd);background:var(--p2);border-radius:14px;padding:15px;font-weight:700;font-size:16px;min-height:54px}
+  .btn.pri{background:var(--brand);border-color:var(--brand);color:#1a120c}
+  .btn.ok{background:var(--ok);border-color:var(--ok);color:#0c1a10}
+  .btn.sec{background:none}
+  .btn:disabled{opacity:.5}
+  .linha-bts{display:flex;gap:10px}
+  .aviso{border-radius:14px;padding:14px;font-size:14.5px;border:1.5px solid}
+  .aviso.err{background:rgba(217,88,75,.12);border-color:rgba(217,88,75,.6)}
+  .aviso.warn{background:rgba(229,169,60,.1);border-color:rgba(229,169,60,.55)}
+  .aviso.ok{background:rgba(111,191,127,.1);border-color:rgba(111,191,127,.55)}
+  .aviso b{display:block;font-size:16px;margin-bottom:4px}
+
+  /* leitura do QR */
+  .camera{position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:3/4;border:2px solid var(--bd)}
+  .camera video{width:100%;height:100%;object-fit:cover;display:block}
+  .camera .mira{position:absolute;inset:18% 14%;border:3px solid rgba(216,180,143,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+  .camera .msg{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:13.5px;font-weight:600;text-shadow:0 1px 6px #000}
+  .alternativas{display:flex;gap:10px}
+  .alternativas .btn{font-size:14px;min-height:48px;padding:10px}
+
+  /* confirmação: o ID é a peça principal da tela */
+  .dev-id{font:800 38px/1 var(--mono);letter-spacing:-.02em;color:#fff}
+  .dev-dados{margin-top:12px;display:grid;gap:8px}
+  .dev-dados div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--bd);padding-bottom:7px}
+  .dev-dados span{color:var(--mut);font-size:13px}
+  .dev-dados b{text-align:right;font-weight:600;overflow-wrap:anywhere}
+  .produtos{margin-top:10px;font-size:14px}
+  .produtos li{list-style:none;padding:4px 0}
+
+  /* tela de fotos */
+  .faixa{position:sticky;top:0;z-index:5;background:var(--p2);border:1.5px solid var(--brand);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+  .faixa .dev-id{font-size:24px}
+  .faixa small{display:block;color:var(--mut);font-size:12.5px}
+  .tipos{display:flex;flex-wrap:wrap;gap:8px}
+  .tipo{border:1.5px solid var(--bd);background:var(--p2);border-radius:99px;padding:9px 14px;font-size:14px;font-weight:600}
+  .tipo.on{border-color:var(--brand);background:rgba(176,134,98,.22);color:#fff}
+  .tipo .ok{color:var(--ok)}
+  .disparo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--brand);color:#1a120c;border-radius:20px;min-height:88px;font-size:20px;font-weight:800;border:0;width:100%}
+  .disparo small{font-size:14px;font-weight:700;opacity:.85}
+  .galeria{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .miniatura{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1}
+  .miniatura img{width:100%;height:100%;object-fit:cover;display:block}
+  .miniatura .estado{position:absolute;left:0;right:0;bottom:0;font-size:11.5px;font-weight:700;padding:4px 6px;background:rgba(0,0,0,.72)}
+  .miniatura.enviada .estado{color:var(--ok)}
+  .miniatura.erro .estado{color:#ffb4ab}
+  .miniatura .descartar{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border:0;border-radius:8px;padding:2px 7px;color:#ffb4ab;font-size:12px}
+  .faltam{display:flex;flex-wrap:wrap;gap:6px;font-size:12.5px}
+  .faltam span,.faltam button{border:1px dashed rgba(229,169,60,.7);color:#f3d38f;background:none;border-radius:99px;padding:6px 12px;font-size:13px}
+  .rodape{font-size:12px;color:var(--mut);text-align:center}
+  .fila{font-size:13px;color:var(--warn);text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">DC</div>
+  <h1>Fotos de devolução<small id="subtitulo">D Coração Home</small></h1>
+  <div class="quem" id="quem"></div>
+</header>
+
+<main>
+  <!-- LOGIN -->
+  <section id="telaLogin" class="oculto">
+    <div class="cartao">
+      <h2>Quem está tirando as fotos?</h2>
+      <label class="campo"><span>Seu nome</span><select class="in" id="lNome"><option value="">carregando…</option></select></label>
+      <label class="campo"><span>PIN</span><input class="in" id="lPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></label>
+      <div id="lErro" class="aviso err oculto" style="margin-bottom:12px"></div>
+      <button class="btn pri" id="lEntrar" type="button">Entrar</button>
+    </div>
+    <details class="rodape"><summary>Configurar endereço do sistema</summary>
+      <input class="in" id="lApi" type="url" placeholder="https://script.google.com/macros/s/…/exec" style="margin-top:8px;font-size:13px">
+      <button class="btn sec" id="lApiSalvar" type="button" style="margin-top:8px;min-height:44px;font-size:14px">Salvar endereço</button>
+    </details>
+  </section>
+
+  <!-- LER QR -->
+  <section id="telaLer" class="oculto">
+    <div class="camera"><video id="video" playsinline muted></video><div class="mira"></div><div class="msg" id="camMsg">Aponte para o QR da etiqueta da devolução</div></div>
+    <div id="lerErro" class="aviso err oculto"></div>
+    <div class="alternativas">
+      <label class="btn sec">📷 Ler por foto<input id="qrFoto" type="file" accept="image/*" capture="environment" hidden></label>
+      <button class="btn sec" id="btnDigitar" type="button">⌨️ Digitar código</button>
+    </div>
+    <div id="digitar" class="cartao oculto">
+      <label class="campo"><span>Código impresso embaixo do QR (ex.: DEV-000125 A1B2C3)</span><input class="in" id="codDigitado" autocapitalize="characters" autocomplete="off"></label>
+      <button class="btn pri" id="btnCodigo" type="button">Procurar</button>
+    </div>
+    <p class="fila oculto" id="filaLer"></p>
+  </section>
+
+  <!-- CONFIRMAR -->
+  <section id="telaConfirmar" class="oculto">
+    <div class="cartao">
+      <div class="rodape" style="text-align:left">Confira se é a devolução que está na sua frente</div>
+      <div class="dev-id" id="cId"></div>
+      <div class="dev-dados" id="cDados"></div>
+      <ul class="produtos" id="cProdutos"></ul>
+    </div>
+    <div id="cBloqueio" class="aviso err oculto"></div>
+    <button class="btn ok" id="btnConfirmar" type="button">✅ É esta devolução</button>
+    <button class="btn sec" id="btnOutra" type="button">Não é — ler outro QR</button>
+  </section>
+
+  <!-- FOTOS -->
+  <section id="telaFotos" class="oculto">
+    <div class="faixa"><div><div class="dev-id" id="fId"></div><small id="fResumo"></small></div></div>
+    <div>
+      <div class="rodape" style="text-align:left;margin-bottom:8px">Que foto é essa?</div>
+      <div class="tipos" id="tipos"></div>
+    </div>
+    <label class="disparo" id="disparo"><span>📷 TIRAR FOTO</span><small id="disparoTipo"></small><input id="camera" type="file" accept="image/*" capture="environment" hidden></label>
+    <div class="faltam" id="faltam"></div>
+    <div class="galeria" id="galeria"></div>
+    <p class="fila oculto" id="filaFotos"></p>
+    <div class="linha-bts">
+      <button class="btn sec" id="btnTrocar" type="button">Outra devolução</button>
+      <button class="btn pri" id="btnTerminei" type="button">Terminei</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+'use strict';
+// ===================================================================
+// ENDEREÇO DO SISTEMA: a URL da implantação do Apps Script de Defeitos & Devoluções
+// que termina em /exec (implantação com acesso "Qualquer pessoa"). Também dá para
+// colar pelo próprio app, em "Configurar endereço do sistema".
+// ===================================================================
+const API_PADRAO = 'COLE_AQUI_A_URL_DA_IMPLANTACAO/exec';
+const K = { api: 'dc_dev_api', nome: 'dc_dev_nome', pin: 'dc_dev_pin' };
+
+const $ = id => document.getElementById(id);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const api = () => localStorage.getItem(K.api) || API_PADRAO;
+let sessao = { nome: localStorage.getItem(K.nome) || '', pin: localStorage.getItem(K.pin) || '' };
+let dev = null;             // devolução confirmada (a que recebe as fotos agora)
+let tipoAtual = '';
+const minhas = [];          // fotos desta sessão (para a galeria)
+
+function tela(nome) {
+  ['Login', 'Ler', 'Confirmar', 'Fotos'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
+  $('quem').innerHTML = sessao.nome && nome !== 'Login' ? esc(sessao.nome) + '<br><button type="button" id="btnSair">sair</button>' : '';
+  if ($('btnSair')) $('btnSair').onclick = () => { localStorage.removeItem(K.pin); sessao.pin = ''; pararCamera(); abrirLogin(); };
+  if (nome !== 'Ler') pararCamera();
+  window.scrollTo(0, 0);
+}
+function aparelho() {
+  const ua = navigator.userAgent;
+  const so = (/Android [\d.]+/.exec(ua) || /iPhone OS [\d_]+/.exec(ua) || ['celular'])[0].replace(/_/g, '.');
+  const nav = /SamsungBrowser/.test(ua) ? 'Samsung' : /CriOS|Chrome/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : 'navegador';
+  return so + ' · ' + nav;
+}
+
+// ---------- comunicação (POST como texto: o Apps Script não aceita pré-verificação CORS) ----------
+async function chamar(dados, tempo) {
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const t = setTimeout(() => ctrl && ctrl.abort(), tempo || 45000);
+  try {
+    const r = await fetch(api(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(dados), signal: ctrl ? ctrl.signal : undefined, redirect: 'follow' });
+    const texto = await r.text();
+    try { return JSON.parse(texto); } catch (e) { throw { rede: true, message: 'O sistema respondeu algo inesperado (a URL está certa e publicada como "Qualquer pessoa"?).' }; }
+  } catch (e) {
+    if (e && e.rede) throw e;
+    throw { rede: true, message: navigator.onLine ? 'Sem resposta do sistema (internet fraca?).' : 'Celular sem internet.' };
+  } finally { clearTimeout(t); }
+}
+
+// =====================================================================
+// LOGIN
+// =====================================================================
+async function abrirLogin() {
+  tela('Login');
+  $('lApi').value = localStorage.getItem(K.api) || '';
+  $('lPin').value = '';
+  $('lErro').classList.add('oculto');
+  if (/COLE_AQUI/.test(api())) { $('lNome').innerHTML = '<option value="">configure o endereço do sistema abaixo</option>'; document.querySelector('details').open = true; return; }
+  try {
+    const r = await fetch(api() + '?action=devOperadores').then(x => x.json());
+    const nomes = r.operadores || [];
+    $('lNome').innerHTML = nomes.length ? '<option value="">Escolha…</option>' + nomes.map(n => '<option' + (n === sessao.nome ? ' selected' : '') + '>' + esc(n) + '</option>').join('') : '<option value="">ninguém cadastrado — peça ao escritório</option>';
+  } catch (e) { $('lNome').innerHTML = '<option value="">sem conexão com o sistema</option>'; }
+}
+$('lEntrar').onclick = async () => {
+  const nome = $('lNome').value, pin = $('lPin').value.trim();
+  if (!nome || !pin) { mostrarErroLogin('Escolha o seu nome e digite o PIN.'); return; }
+  $('lEntrar').disabled = true; $('lEntrar').innerHTML = '<span class="gira">⏳</span> Entrando…';
+  try {
+    const r = await chamar({ action: 'devLogin', operador: nome, pin: pin }, 20000);
+    if (r.status !== 'ok') { mostrarErroLogin(r.msg); return; }
+    sessao = { nome: r.nome, pin: pin };
+    localStorage.setItem(K.nome, r.nome); localStorage.setItem(K.pin, pin);
+    abrirLeitura();
+    processarFila();
+  } catch (e) { mostrarErroLogin(e.message); }
+  finally { $('lEntrar').disabled = false; $('lEntrar').textContent = 'Entrar'; }
+};
+function mostrarErroLogin(m) { $('lErro').textContent = m; $('lErro').classList.remove('oculto'); }
+$('lApiSalvar').onclick = () => { const v = $('lApi').value.trim(); if (v) localStorage.setItem(K.api, v); else localStorage.removeItem(K.api); abrirLogin(); };
+
+// =====================================================================
+// LEITURA DO QR (câmera ao vivo; alternativas: foto do QR ou digitar)
+// =====================================================================
+let stream = null, laco = null, detector = null, lendo = false;
+async function abrirLeitura(erro) {
+  tela('Ler');
+  $('digitar').classList.add('oculto');
+  $('lerErro').classList.toggle('oculto', !erro);
+  if (erro) $('lerErro').innerHTML = erro;
+  $('camMsg').textContent = 'Aponte para o QR da etiqueta da devolução';
+  lendo = false;
+  try {
+    if ('BarcodeDetector' in window) {
+      try { const f = await BarcodeDetector.getSupportedFormats(); if (f.indexOf('qr_code') !== -1) detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) {}
+    }
+    if (!detector) await carregarJsQR();
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    const v = $('video'); v.srcObject = stream; await v.play();
+    const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+    laco = setInterval(async () => {
+      if (lendo || !v.videoWidth) return;
+      try {
+        let texto = '';
+        if (detector) { const r = await detector.detect(v); if (r && r[0]) texto = r[0].rawValue; }
+        else if (window.jsQR) {
+          const w = 640, h = Math.round(v.videoHeight * 640 / v.videoWidth);
+          canvas.width = w; canvas.height = h; ctx.drawImage(v, 0, 0, w, h);
+          const r = window.jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
+          if (r) texto = r.data;
+        }
+        if (texto) aoLerQR(texto);
+      } catch (e) {}
+    }, 180);
+  } catch (e) {
+    $('camMsg').textContent = 'Câmera indisponível — use "Ler por foto" ou "Digitar código"';
+  }
+}
+function pararCamera() {
+  clearInterval(laco); laco = null;
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+let jsqrCarregando = null;
+function carregarJsQR() {
+  if (window.jsQR) return Promise.resolve();
+  if (!jsqrCarregando) jsqrCarregando = new Promise(ok => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'; s.onload = ok; s.onerror = ok; document.head.appendChild(s); });
+  return jsqrCarregando;
+}
+$('qrFoto').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  $('camMsg').textContent = 'Lendo a foto do QR…';
+  try {
+    const bmp = await createImageBitmap(f);
+    let texto = '';
+    if (detector) { const r = await detector.detect(bmp); if (r && r[0]) texto = r[0].rawValue; }
+    if (!texto) {
+      await carregarJsQR();
+      const c = document.createElement('canvas'), k = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      const cx = c.getContext('2d'); cx.drawImage(bmp, 0, 0, c.width, c.height);
+      const r = window.jsQR ? window.jsQR(cx.getImageData(0, 0, c.width, c.height).data, c.width, c.height) : null;
+      if (r) texto = r.data;
+    }
+    if (texto) aoLerQR(texto); else abrirLeitura('<b>Não achei um QR nessa foto.</b>Chegue mais perto do QR, com boa luz, e tente de novo.');
+  } catch (err) { abrirLeitura('<b>Não consegui ler a foto.</b>' + esc(err.message || '')); }
+};
+$('btnDigitar').onclick = () => { $('digitar').classList.toggle('oculto'); $('codDigitado').focus(); };
+$('btnCodigo').onclick = () => { const v = $('codDigitado').value.trim(); if (v) aoLerQR(v); };
+$('codDigitado').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnCodigo').click(); });
+
+async function aoLerQR(texto) {
+  if (lendo) return;
+  lendo = true;
+  if (navigator.vibrate) navigator.vibrate(60);
+  $('camMsg').innerHTML = '<span class="gira">⏳</span> Conferindo…';
+  try {
+    const r = await chamar({ action: 'devFotoInfo', qr: texto, operador: sessao.nome, pin: sessao.pin }, 25000);
+    if (r.status !== 'ok') {
+      if (r.codigo === 'pin') { abrirLogin(); mostrarErroLogin(r.msg); return; }
+      abrirLeitura('<b>' + (r.codigo === 'qr' ? 'QR não reconhecido' : r.codigo === 'inexistente' ? 'Devolução não encontrada' : 'Não deu certo') + '</b>' + esc(r.msg));
+      return;
+    }
+    mostrarConfirmacao(r);
+  } catch (e) { abrirLeitura('<b>Sem conexão</b>' + esc(e.message) + ' Tente de novo.'); }
+}
+
+// =====================================================================
+// CONFIRMAR A DEVOLUÇÃO (antes de qualquer foto)
+// =====================================================================
+function mostrarConfirmacao(r) {
+  tela('Confirmar');
+  $('cId').textContent = r.id;
+  const linha = (rot, v) => v ? '<div><span>' + rot + '</span><b>' + esc(v) + '</b></div>' : '';
+  $('cDados').innerHTML = linha('Pedido', r.pedido) + linha('Loja', r.marketplace) + linha('Cliente', r.cliente) + linha('Situação', r.situacao) + linha('Fotos já registradas', String(r.fotos.length));
+  $('cProdutos').innerHTML = r.produtos.map(p => '<li>📦 ' + esc(p.produto) + ' — <b>' + p.qtd + ' un</b></li>').join('');
+  $('cBloqueio').classList.toggle('oculto', r.podeEnviar);
+  $('cBloqueio').innerHTML = r.podeEnviar ? '' : '<b>Não recebe fotos</b>' + esc(r.motivoBloqueio);
+  $('btnConfirmar').classList.toggle('oculto', !r.podeEnviar);
+  $('btnConfirmar').onclick = () => { dev = r; abrirFotos(); };
+}
+$('btnOutra').onclick = () => abrirLeitura();
+
+// =====================================================================
+// FOTOS
+// =====================================================================
+function abrirFotos() {
+  tela('Fotos');
+  $('fId').textContent = dev.id;
+  $('fResumo').textContent = 'Pedido ' + (dev.pedido || '—') + ' · ' + (dev.cliente || '');
+  const falta = dev.fotosFaltando || [];
+  if (!tipoAtual || falta.indexOf(tipoAtual) === -1) tipoAtual = falta[0] || 'Outra';
+  desenharTipos(); desenharGaleria();
+}
+function desenharTipos() {
+  const feitas = {};
+  (dev.fotos || []).forEach(f => { feitas[f.tipo] = true; });
+  $('tipos').innerHTML = (dev.tiposFoto || []).map(t => '<button type="button" class="tipo' + (t === tipoAtual ? ' on' : '') + '" data-t="' + esc(t) + '">' + (feitas[t] ? '<span class="ok">✓ </span>' : '') + esc(t) + '</button>').join('');
+  // O tipo NÃO troca sozinho: a caixa pede várias fotos e um pulo automático gravaria a 2ª foto com o tipo errado.
+  // O botão grande mostra o tipo escolhido e cada "falta" é um atalho de um toque.
+  $('disparoTipo').textContent = tipoAtual;
+  $('faltam').innerHTML = (dev.fotosFaltando || []).length ? (dev.fotosFaltando || []).map(t => '<button type="button" data-t="' + esc(t) + '">falta: ' + esc(t) + '</button>').join('') : '<span style="border-color:rgba(111,191,127,.7);color:#a7e0b3">todas as fotos obrigatórias já foram enviadas ✓</span>';
+}
+['tipos', 'faltam'].forEach(id => $(id).addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { tipoAtual = b.dataset.t; desenharTipos(); } }));
+$('camera').onchange = async e => {
+  const arquivos = Array.prototype.slice.call(e.target.files || []); e.target.value = '';
+  for (const f of arquivos) {
+    try {
+      const imagem = await reduzir(f);
+      const item = { fotoId: novoId(), qr: dev.qr, devId: dev.id, tipo: tipoAtual, imagem: imagem, criadaEm: Date.now(), tentativas: 0, estado: 'pendente', erro: '' };
+      await fila.salvar(item);
+      minhas.unshift({ fotoId: item.fotoId, devId: item.devId, tipo: item.tipo, mini: await miniatura(imagem), estado: 'pendente', msg: 'na fila' });
+      desenharGaleria();
+    } catch (err) { alert('Não consegui preparar a foto: ' + (err.message || err)); }
+  }
+  processarFila();
+};
+function novoId() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9_-]/g, ''); }
+function carregarImagem(fonte) {
+  return new Promise((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => erro(new Error('imagem ilegível')); i.src = fonte; });
+}
+async function reduzir(arquivo) {                          // ~1600 px, JPEG 82%: nítido e ~0,4 MB
+  const url = URL.createObjectURL(arquivo);
+  try {
+    const img = await carregarImagem(url);
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.82);
+  } finally { URL.revokeObjectURL(url); }
+}
+async function miniatura(dataUrl) {
+  const img = await carregarImagem(dataUrl);
+  const c = document.createElement('canvas'), k = 220 / Math.max(img.width, img.height);
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.6);
+}
+function desenharGaleria() {
+  const daqui = minhas.filter(m => dev && m.devId === dev.id);
+  $('galeria').innerHTML = daqui.map(m => '<div class="miniatura ' + m.estado + '"><img alt="" src="' + m.mini + '"><div class="estado">' +
+    (m.estado === 'enviada' ? '✓ ' + esc(m.tipo) : m.estado === 'erro' ? '⚠ ' + esc(m.msg) : '<span class="gira">⏳</span> ' + esc(m.msg)) + '</div>' +
+    (m.estado === 'erro' ? '<button class="descartar" type="button" data-descartar="' + esc(m.fotoId) + '">descartar</button>' : '') + '</div>').join('');
+}
+$('galeria').addEventListener('click', async e => {
+  const b = e.target.closest('[data-descartar]'); if (!b) return;
+  if (!confirm('Descartar esta foto? Ela não foi enviada.')) return;
+  await fila.remover(b.dataset.descartar);
+  const i = minhas.findIndex(m => m.fotoId === b.dataset.descartar); if (i >= 0) minhas.splice(i, 1);
+  desenharGaleria(); atualizarAvisoFila();
+});
+$('btnTrocar').onclick = () => { dev = null; abrirLeitura(); };
+$('btnTerminei').onclick = async () => {
+  const pend = (await fila.todos()).filter(x => x.devId === dev.id && x.estado === 'pendente').length;
+  if (pend && !confirm(pend + ' foto(s) ainda estão sendo enviadas. Elas continuam sozinhas em segundo plano enquanto o app estiver aberto. Sair assim mesmo?')) return;
+  dev = null; abrirLeitura();
+};
+
+// =====================================================================
+// FILA DE ENVIO (IndexedDB): foto tirada nunca se perde — nem sem internet, nem fechando o app
+// =====================================================================
+const fila = (function () {
+  let db = null;
+  const abrir = () => db ? Promise.resolve(db) : new Promise((ok, erro) => {
+    const r = indexedDB.open('dc_devolucoes', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('fila', { keyPath: 'fotoId' });
+    r.onsuccess = () => { db = r.result; ok(db); };
+    r.onerror = () => erro(r.error);
+  });
+  const op = (modo, fn) => abrir().then(d => new Promise((ok, erro) => { const t = d.transaction('fila', modo); const req = fn(t.objectStore('fila')); t.oncomplete = () => ok(req && req.result); t.onerror = () => erro(t.error); }));
+  return {
+    salvar: item => op('readwrite', s => s.put(item)),
+    remover: id => op('readwrite', s => s.delete(id)),
+    todos: () => op('readonly', s => s.getAll()).then(l => (l || []).sort((a, b) => a.criadaEm - b.criadaEm))
+  };
+})();
+let enviando = false, espera = 3000, timerFila = null;
+async function processarFila() {
+  if (enviando || !sessao.pin) return;
+  enviando = true; clearTimeout(timerFila);
+  try {
+    const itens = (await fila.todos()).filter(x => x.estado === 'pendente');
+    for (const item of itens) {
+      marcar(item.fotoId, 'pendente', 'enviando…');
+      let r;
+      try {
+        r = await chamar({ action: 'devFotoEnviar', qr: item.qr, operador: sessao.nome, pin: sessao.pin, fotoId: item.fotoId, tipo: item.tipo, imagem: item.imagem, aparelho: aparelho() }, 90000);
+      } catch (e) {                                            // sem internet / servidor lento: tenta de novo sozinho
+        item.tentativas++; await fila.salvar(item);
+        marcar(item.fotoId, 'pendente', 'aguardando internet');
+        espera = Math.min(espera * 2, 60000);
+        timerFila = setTimeout(processarFila, espera);
+        return;
+      }
+      espera = 3000;
+      if (r.status === 'ok') {
+        await fila.remover(item.fotoId);
+        marcar(item.fotoId, 'enviada', 'enviada');
+        if (dev && r.id === dev.id) { dev.fotos = r.fotos; dev.fotosFaltando = r.fotosFaltando; if ($('telaFotos').classList.contains('oculto') === false) desenharTipos(); }
+        if (navigator.vibrate) navigator.vibrate(40);
+      } else if (r.codigo === 'pin') {
+        marcar(item.fotoId, 'pendente', 'aguardando login');
+        abrirLogin(); mostrarErroLogin(r.msg + ' (as fotos continuam guardadas no celular)');
+        return;
+      } else if (r.codigo === 'servidor') {
+        item.tentativas++; await fila.salvar(item);
+        marcar(item.fotoId, 'pendente', 'tentando de novo');
+        timerFila = setTimeout(processarFila, 15000);
+        return;
+      } else {                                                 // recusa definitiva (devolução finalizada, QR inválido…): não fica tentando
+        item.estado = 'erro'; item.erro = r.msg; await fila.salvar(item);
+        marcar(item.fotoId, 'erro', r.msg);
+      }
+    }
+  } finally { enviando = false; atualizarAvisoFila(); }
+}
+function marcar(fotoId, estado, msg) {
+  const m = minhas.find(x => x.fotoId === fotoId);
+  if (m) { m.estado = estado; m.msg = msg; }
+  if (dev) desenharGaleria();
+}
+async function atualizarAvisoFila() {
+  const l = await fila.todos(), pend = l.filter(x => x.estado === 'pendente').length, err = l.filter(x => x.estado === 'erro').length;
+  const txt = (pend ? '⏳ ' + pend + ' foto(s) aguardando envio — sai sozinho quando tiver internet. ' : '') + (err ? '⚠ ' + err + ' foto(s) recusada(s) — veja a galeria.' : '');
+  ['filaLer', 'filaFotos'].forEach(id => { $(id).textContent = txt; $(id).classList.toggle('oculto', !txt); });
+}
+window.addEventListener('online', () => { espera = 3000; processarFila(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) processarFila(); });
+
+// =====================================================================
+// INÍCIO
+// =====================================================================
+(async function () {
+  // fotos que ficaram na fila de uma vez anterior aparecem na galeria
+  try {
+    for (const it of await fila.todos()) minhas.push({ fotoId: it.fotoId, devId: it.devId, tipo: it.tipo, mini: await miniatura(it.imagem), estado: it.estado, msg: it.estado === 'erro' ? it.erro : 'na fila' });
+  } catch (e) {}
+  if (!sessao.nome || !sessao.pin || /COLE_AQUI/.test(api())) abrirLogin();
+  else { abrirLeitura(); processarFila(); }
+  atualizarAvisoFila();
+})();
+})();
+</script>
+</body>
+</html>
