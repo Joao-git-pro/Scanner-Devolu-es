@@ -82,6 +82,22 @@
   .faltam{display:flex;flex-wrap:wrap;gap:6px;font-size:12.5px}
   .faltam span,.faltam button{border:1px dashed rgba(229,169,60,.7);color:#f3d38f;background:none;border-radius:99px;padding:6px 12px;font-size:13px}
   .rodape{font-size:12px;color:var(--mut);text-align:center}
+  /* etapas da conferência */
+  .etapas{display:flex;gap:6px}
+  .etapas button{flex:1;border:1.5px solid var(--bd);background:var(--p1);border-radius:12px;padding:8px 6px;font-size:12.5px;font-weight:700;color:var(--mut);line-height:1.2}
+  .etapas button b{display:block;font-size:11px;font-weight:600;margin-bottom:2px}
+  .etapas button.on{border-color:var(--brand);color:#fff;background:rgba(176,134,98,.18)}
+  .etapas button.feito{color:#a7e0b3}
+  .etapa-cab h2{font-size:17px;margin-bottom:4px}
+  .disparo.gravar{background:#c62828;color:#fff}
+  .disparo.parar{background:#fff;color:#c62828}
+  .camera.alta{aspect-ratio:3/4}
+  .camera video.rev{position:absolute;inset:0;width:100%;height:100%;background:#000}
+  .rec{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.65);padding:5px 12px;border-radius:99px;font-weight:800;color:#ff8a80;font-size:15px;display:flex;align-items:center;gap:8px}
+  .rec i{width:11px;height:11px;border-radius:50%;background:#ff3b30;animation:pisca 1s infinite}
+  @keyframes pisca{50%{opacity:.25}}
+  .miniatura .filme{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding-bottom:24px;font-size:30px;background:#2a1f18}
+  .miniatura .filme b{font:700 13px var(--mono);color:var(--brand2);margin-top:4px}
   .fila{font-size:13px;color:var(--warn);text-align:center}
 </style>
 </head>
@@ -144,21 +160,40 @@
     <button class="btn sec" id="btnOutra" type="button">Não é — procurar outra</button>
   </section>
 
-  <!-- FOTOS -->
+  <!-- FOTOS E VÍDEO — 3 etapas: caixa fechada → vídeo da abertura → produto -->
   <section id="telaFotos" class="oculto">
     <div class="faixa"><div><div class="dev-id" id="fId"></div><small id="fResumo"></small></div></div>
-    <div>
-      <div class="rodape" style="text-align:left;margin-bottom:8px">Que foto é essa?</div>
+    <div class="etapas" id="etapas"></div>
+    <div class="etapa-cab"><h2 id="etTitulo"></h2><div class="rodape" style="text-align:left" id="etDica"></div></div>
+    <div id="blocoFotos">
       <div class="tipos" id="tipos"></div>
+      <label class="disparo" id="disparo" style="margin-top:10px"><span>📷 TIRAR FOTO</span><small id="disparoTipo"></small><input id="camera" type="file" accept="image/*" capture="environment" hidden></label>
     </div>
-    <label class="disparo" id="disparo"><span>📷 TIRAR FOTO</span><small id="disparoTipo"></small><input id="camera" type="file" accept="image/*" capture="environment" hidden></label>
+    <div id="blocoVideo" class="oculto">
+      <button class="disparo gravar" id="btnAbrirGravacao" type="button"><span>● GRAVAR A ABERTURA</span><small>até 3 minutos</small></button>
+      <div class="rodape" id="videoSituacao" style="margin-top:8px"></div>
+      <label class="btn sec" style="margin-top:8px;min-height:44px;font-size:14px">Usar a câmera do celular<input id="videoNativo" type="file" accept="video/*" capture="environment" hidden></label>
+    </div>
     <div class="faltam" id="faltam"></div>
     <div class="galeria" id="galeria"></div>
     <p class="fila oculto" id="filaFotos"></p>
     <div class="linha-bts">
-      <button class="btn sec" id="btnTrocar" type="button">Outra devolução</button>
-      <button class="btn pri" id="btnTerminei" type="button">Terminei</button>
+      <button class="btn sec" id="btnEtapaAnterior" type="button">← Etapa anterior</button>
+      <button class="btn pri" id="btnProxima" type="button">Próxima etapa →</button>
     </div>
+    <button class="btn sec" id="btnTrocar" type="button">Outra devolução</button>
+  </section>
+
+  <!-- GRAVAÇÃO DO VÍDEO DA ABERTURA -->
+  <section id="telaVideo" class="oculto">
+    <div class="faixa"><div><div class="dev-id" id="vId"></div><small>Vídeo da abertura</small></div></div>
+    <div class="camera alta"><video id="videoGrav" playsinline muted></video><video id="videoRev" class="rev oculto" playsinline controls></video>
+      <div class="rec oculto" id="recInd"><i></i><span id="recTempo">0:00</span><span style="color:var(--mut);font-weight:600">/ 3:00</span></div></div>
+    <p class="rodape" style="text-align:left" id="videoDica">Enquadre a caixa fechada. Toque em COMEÇAR e abra devagar, mostrando a fita sendo cortada, a proteção e o produto.</p>
+    <div id="videoErro" class="aviso err oculto"></div>
+    <button class="disparo gravar" id="btnGravar" type="button"><span id="btnGravarTxt">● COMEÇAR A GRAVAR</span></button>
+    <div class="linha-bts oculto" id="revBts"><button class="btn sec" id="btnRegravar" type="button">↺ Gravar de novo</button><button class="btn ok" id="btnUsarVideo" type="button">✓ Usar este vídeo</button></div>
+    <button class="btn sec" id="btnCancelarVideo" type="button">Cancelar</button>
   </section>
 </main>
 
@@ -170,7 +205,7 @@
 // que termina em /exec (implantação com acesso "Qualquer pessoa"). Também dá para
 // colar pelo próprio app, em "Configurar endereço do sistema".
 // ===================================================================
-const API_PADRAO = 'https://script.google.com/macros/s/AKfycbyJm6ENKr9hUyLvRihiF09O45SSGgZZCY5VxDTIdg7O40BnJtkpjlVBvu63zIHOHVfY8Q/exec';
+const API_PADRAO = 'COLE_AQUI_A_URL_DA_IMPLANTACAO/exec';
 const K = { api: 'dc_dev_api', nome: 'dc_dev_nome', pin: 'dc_dev_pin' };
 
 const $ = id => document.getElementById(id);
@@ -182,7 +217,8 @@ let tipoAtual = '';
 const minhas = [];          // fotos desta sessão (para a galeria)
 
 function tela(nome) {
-  ['Login', 'Ler', 'Escolher', 'Confirmar', 'Fotos'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
+  ['Login', 'Ler', 'Escolher', 'Confirmar', 'Fotos', 'Video'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
+  if (nome !== 'Video') pararGravacao();
   $('quem').innerHTML = sessao.nome && nome !== 'Login' ? esc(sessao.nome) + '<br><button type="button" id="btnSair">sair</button>' : '';
   if ($('btnSair')) $('btnSair').onclick = () => { localStorage.removeItem(K.pin); sessao.pin = ''; pararCamera(); abrirLogin(); };
   if (nome !== 'Ler') pararCamera();
@@ -402,24 +438,67 @@ $('btnOutra').onclick = () => abrirLeitura();
 // =====================================================================
 // FOTOS
 // =====================================================================
+const ETAPAS = [
+  { nome: 'Caixa fechada', dica: 'Antes de abrir: a etiqueta e todos os lados da caixa.', tipos: ['Etiqueta', 'Caixa (todos os lados)'] },
+  { nome: 'Vídeo da abertura', dica: 'Grave do primeiro corte da fita até o produto aparecer inteiro.', video: true },
+  { nome: 'Produto', dica: 'Depois de aberta: a proteção, o produto inteiro e o defeito de perto.', tipos: ['Interior / proteção', 'Produto inteiro', 'Defeito de perto', 'Etiqueta do fornecedor', 'Outra'] }
+];
+let etapa = 0;
+const tipoVideo = () => (dev && dev.tipoVideo) || 'Vídeo da abertura';
+const etapaDe = t => t === tipoVideo() ? 1 : ETAPAS[0].tipos.indexOf(t) !== -1 ? 0 : 2;
+function naFila(t) { return minhas.some(m => dev && m.devId === dev.id && m.tipo === t && m.estado !== 'erro' && m.estado !== 'enviada'); }
+function enviado(t) { return (dev.fotos || []).some(f => f.tipo === t); }
+function faltandoAgora() { return (dev.fotosFaltando || []).filter(t => !naFila(t)); }      // obrigatórios ainda nem tirados
 function abrirFotos() {
   tela('Fotos');
   $('fId').textContent = dev.id;
   $('fResumo').textContent = 'Pedido ' + (dev.pedido || '—') + ' · ' + (dev.cliente || '');
-  const falta = dev.fotosFaltando || [];
-  if (!tipoAtual || falta.indexOf(tipoAtual) === -1) tipoAtual = falta[0] || 'Outra';
+  const f = faltandoAgora();
+  etapa = f.length ? etapaDe(f[0]) : 2;
+  irEtapa(etapa);
+}
+function irEtapa(i) {
+  etapa = Math.max(0, Math.min(2, i));
+  const et = ETAPAS[etapa];
+  if (et.tipos && et.tipos.indexOf(tipoAtual) === -1) tipoAtual = faltandoAgora().filter(t => et.tipos.indexOf(t) !== -1)[0] || et.tipos[0];
   desenharTipos(); desenharGaleria();
+  window.scrollTo(0, 0);
 }
 function desenharTipos() {
-  const feitas = {};
-  (dev.fotos || []).forEach(f => { feitas[f.tipo] = true; });
-  $('tipos').innerHTML = (dev.tiposFoto || []).map(t => '<button type="button" class="tipo' + (t === tipoAtual ? ' on' : '') + '" data-t="' + esc(t) + '">' + (feitas[t] ? '<span class="ok">✓ </span>' : '') + esc(t) + '</button>').join('');
-  // O tipo NÃO troca sozinho: a caixa pede várias fotos e um pulo automático gravaria a 2ª foto com o tipo errado.
-  // O botão grande mostra o tipo escolhido e cada "falta" é um atalho de um toque.
-  $('disparoTipo').textContent = tipoAtual;
-  $('faltam').innerHTML = (dev.fotosFaltando || []).length ? (dev.fotosFaltando || []).map(t => '<button type="button" data-t="' + esc(t) + '">falta: ' + esc(t) + '</button>').join('') : '<span style="border-color:rgba(111,191,127,.7);color:#a7e0b3">todas as fotos obrigatórias já foram enviadas ✓</span>';
+  if (!dev) return;
+  const et = ETAPAS[etapa], falta = faltandoAgora();
+  $('etapas').innerHTML = ETAPAS.map((e, i) => {
+    const pend = falta.some(t => etapaDe(t) === i);
+    return '<button type="button" data-etapa="' + i + '" class="' + (i === etapa ? 'on ' : '') + (pend ? '' : 'feito') + '"><b>' + (pend ? (i + 1) : '✓') + '</b>' + esc(e.nome) + '</button>';
+  }).join('');
+  $('etTitulo').textContent = 'Etapa ' + (etapa + 1) + ' de 3 · ' + et.nome;
+  $('etDica').textContent = et.dica + (et.video && !dev.videoObrigatorio ? ' Esta devolução foi marcada "Sem caixa": o vídeo é opcional.' : '');
+  $('blocoFotos').classList.toggle('oculto', !!et.video);
+  $('blocoVideo').classList.toggle('oculto', !et.video);
+  if (et.tipos) {
+    // O tipo NÃO troca sozinho dentro da etapa: a caixa pede várias fotos e um pulo automático gravaria a 2ª foto com o tipo errado.
+    $('tipos').innerHTML = et.tipos.map(t => '<button type="button" class="tipo' + (t === tipoAtual ? ' on' : '') + '" data-t="' + esc(t) + '">' +
+      (enviado(t) ? '<span class="ok">✓ </span>' : naFila(t) ? '⏳ ' : '') + esc(t) + '</button>').join('');
+    $('disparoTipo').textContent = tipoAtual;
+  } else {
+    const tv = tipoVideo();
+    $('videoSituacao').innerHTML = enviado(tv) ? '<span style="color:#a7e0b3">✓ Vídeo da abertura enviado.</span> Se precisar, grave outro.' : naFila(tv) ? '⏳ Vídeo gravado, na fila de envio. Pode seguir para o produto.' : '';
+  }
+  const ff = dev.fotosFaltando || [];
+  $('faltam').innerHTML = ff.length ? ff.map(t => '<button type="button" data-t="' + esc(t) + '">' + (naFila(t) ? '⏳ ' : 'falta: ') + esc(t) + '</button>').join('') : '<span style="border-color:rgba(111,191,127,.7);color:#a7e0b3">todas as fotos e o vídeo obrigatórios já foram enviados ✓</span>';
+  $('btnEtapaAnterior').classList.toggle('oculto', etapa === 0);
+  $('btnProxima').textContent = etapa === 2 ? 'Terminei' : 'Próxima etapa →';
 }
-['tipos', 'faltam'].forEach(id => $(id).addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { tipoAtual = b.dataset.t; desenharTipos(); } }));
+$('etapas').addEventListener('click', e => { const b = e.target.closest('[data-etapa]'); if (b) irEtapa(Number(b.dataset.etapa)); });
+$('tipos').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { tipoAtual = b.dataset.t; desenharTipos(); } });
+$('faltam').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; const t = b.dataset.t; if (t !== tipoVideo()) tipoAtual = t; irEtapa(etapaDe(t)); });
+$('btnEtapaAnterior').onclick = () => irEtapa(etapa - 1);
+$('btnProxima').onclick = () => {
+  if (etapa === 2) return terminar();
+  const falta = faltandoAgora().filter(t => etapaDe(t) === etapa);
+  if (falta.length && !confirm('Ainda falta nesta etapa: ' + falta.join(', ') + '.\n\nAvançar mesmo assim?')) return;
+  irEtapa(etapa + 1);
+};
 $('camera').onchange = async e => {
   const arquivos = Array.prototype.slice.call(e.target.files || []); e.target.value = '';
   for (const f of arquivos) {
@@ -428,7 +507,7 @@ $('camera').onchange = async e => {
       const item = { fotoId: novoId(), devId: dev.id, tipo: tipoAtual, imagem: imagem, criadaEm: Date.now(), tentativas: 0, estado: 'pendente', erro: '' };
       await fila.salvar(item);
       minhas.unshift({ fotoId: item.fotoId, devId: item.devId, tipo: item.tipo, mini: await miniatura(imagem), estado: 'pendente', msg: 'na fila' });
-      desenharGaleria();
+      desenharTipos(); desenharGaleria();
     } catch (err) { alert('Não consegui preparar a foto: ' + (err.message || err)); }
   }
   processarFila();
@@ -456,22 +535,118 @@ async function miniatura(dataUrl) {
 }
 function desenharGaleria() {
   const daqui = minhas.filter(m => dev && m.devId === dev.id);
-  $('galeria').innerHTML = daqui.map(m => '<div class="miniatura ' + m.estado + '"><img alt="" src="' + m.mini + '"><div class="estado">' +
+  $('galeria').innerHTML = daqui.map(m => '<div class="miniatura ' + m.estado + '">' + (m.video ? '<div class="filme">🎬<b>' + duracaoTxt(m.duracao) + '</b></div>' : '<img alt="" src="' + m.mini + '">') + '<div class="estado">' +
     (m.estado === 'enviada' ? '✓ ' + esc(m.tipo) : m.estado === 'erro' ? '⚠ ' + esc(m.msg) : '<span class="gira">⏳</span> ' + esc(m.msg)) + '</div>' +
     (m.estado === 'erro' ? '<button class="descartar" type="button" data-descartar="' + esc(m.fotoId) + '">descartar</button>' : '') + '</div>').join('');
 }
 $('galeria').addEventListener('click', async e => {
   const b = e.target.closest('[data-descartar]'); if (!b) return;
-  if (!confirm('Descartar esta foto? Ela não foi enviada.')) return;
-  await fila.remover(b.dataset.descartar);
+  if (!confirm('Descartar este item? Ele não foi enviado.')) return;
+  await fila.remover(b.dataset.descartar); try { localStorage.removeItem('dc_dev_prog_' + b.dataset.descartar); } catch (x) {}
   const i = minhas.findIndex(m => m.fotoId === b.dataset.descartar); if (i >= 0) minhas.splice(i, 1);
   desenharGaleria(); atualizarAvisoFila();
 });
 $('btnTrocar').onclick = () => { dev = null; abrirLeitura(); };
-$('btnTerminei').onclick = async () => {
+async function terminar() {
+  const falta = faltandoAgora();
+  if (falta.length && !confirm('Ainda falta: ' + falta.join(', ') + '.\n\nTerminar mesmo assim? (dá para completar depois, procurando a devolução de novo)')) return;
   const pend = (await fila.todos()).filter(x => x.devId === dev.id && x.estado === 'pendente').length;
-  if (pend && !confirm(pend + ' foto(s) ainda estão sendo enviadas. Elas continuam sozinhas em segundo plano enquanto o app estiver aberto. Sair assim mesmo?')) return;
+  if (pend && !confirm(pend + ' item(ns) ainda estão sendo enviados. Eles continuam sozinhos enquanto o app estiver aberto. Sair desta devolução assim mesmo?')) return;
   dev = null; abrirLeitura();
+}
+function duracaoTxt(s) { s = Math.round(Number(s) || 0); return s ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : 'vídeo'; }
+
+// =====================================================================
+// VÍDEO DA ABERTURA — gravado no próprio app (720p, ~1,5 Mbps, até 3 min: 1 min ≈ 12 MB).
+// A câmera nativa grava 100 MB+ por minuto; por isso ela fica só como alternativa.
+// =====================================================================
+const VIDEO_MAX_S = 180;
+let streamVid = null, gravador = null, pedacos = [], inicioGrav = 0, timerGrav = null, videoPronto = null, travaTela = null;
+function mimeVideo() {
+  const c = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'];
+  if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+  return c.filter(t => MediaRecorder.isTypeSupported(t))[0] || '';
+}
+function erroVideo(m) { $('videoErro').innerHTML = m; $('videoErro').classList.toggle('oculto', !m); }
+async function abrirGravacao() {
+  if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('videoNativo').click(); return; }
+  tela('Video');
+  $('vId').textContent = dev.id;
+  erroVideo(''); videoPronto = null;
+  $('videoRev').classList.add('oculto'); $('videoGrav').classList.remove('oculto');
+  $('revBts').classList.add('oculto'); $('btnGravar').classList.remove('oculto', 'parar'); $('btnGravarTxt').textContent = '● COMEÇAR A GRAVAR';
+  $('recInd').classList.add('oculto');
+  try {
+    const video = { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } };
+    try { streamVid = await navigator.mediaDevices.getUserMedia({ video: video, audio: true }); }
+    catch (e) { streamVid = await navigator.mediaDevices.getUserMedia({ video: video, audio: false }); }     // sem microfone: grava só a imagem
+    const v = $('videoGrav'); v.srcObject = streamVid; await v.play();
+  } catch (e) {
+    erroVideo('<b>Câmera indisponível.</b>Permita a câmera para este site ou use "Usar a câmera do celular".');
+  }
+}
+function comecarGravacao() {
+  if (!streamVid) return;
+  const mime = mimeVideo();
+  pedacos = [];
+  try { gravador = new MediaRecorder(streamVid, Object.assign({ videoBitsPerSecond: 1500000, audioBitsPerSecond: 64000 }, mime ? { mimeType: mime } : {})); }
+  catch (e) { gravador = new MediaRecorder(streamVid); }
+  gravador.ondataavailable = e => { if (e.data && e.data.size) pedacos.push(e.data); };
+  gravador.onstop = fimGravacao;
+  gravador.start(1000);
+  inicioGrav = Date.now();
+  $('recInd').classList.remove('oculto'); $('recTempo').textContent = '0:00';
+  $('btnGravar').classList.add('parar'); $('btnGravarTxt').textContent = '■ PARAR';
+  $('btnCancelarVideo').classList.add('oculto');
+  try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(t => { travaTela = t; }).catch(() => {}); } catch (e) {}
+  timerGrav = setInterval(() => {
+    const s = Math.floor((Date.now() - inicioGrav) / 1000);
+    $('recTempo').textContent = duracaoTxt(s) === 'vídeo' ? '0:00' : duracaoTxt(s);
+    if (s >= VIDEO_MAX_S) pararGravando();
+  }, 250);
+  if (navigator.vibrate) navigator.vibrate(80);
+}
+function pararGravando() { if (gravador && gravador.state !== 'inactive') gravador.stop(); }
+function fimGravacao() {
+  clearInterval(timerGrav);
+  const dur = Math.round((Date.now() - inicioGrav) / 1000);
+  const tipo = (gravador && gravador.mimeType) || (pedacos[0] && pedacos[0].type) || 'video/webm';
+  const blob = new Blob(pedacos, { type: tipo });
+  pedacos = [];
+  if (streamVid) { streamVid.getTracks().forEach(t => t.stop()); streamVid = null; }
+  try { if (travaTela) { travaTela.release(); travaTela = null; } } catch (e) {}
+  $('recInd').classList.add('oculto'); $('btnGravar').classList.add('oculto'); $('btnCancelarVideo').classList.remove('oculto');
+  if (!blob.size) { erroVideo('<b>O vídeo saiu vazio.</b>Grave de novo.'); $('btnGravar').classList.remove('oculto', 'parar'); $('btnGravarTxt').textContent = '● COMEÇAR A GRAVAR'; abrirGravacao(); return; }
+  videoPronto = { blob: blob, mime: tipo, duracao: dur };
+  const rev = $('videoRev'); rev.src = URL.createObjectURL(blob); rev.classList.remove('oculto'); $('videoGrav').classList.add('oculto');
+  $('revBts').classList.remove('oculto');
+  $('videoDica').textContent = 'Vídeo de ' + duracaoTxt(dur) + ' (' + (blob.size / 1048576).toFixed(1) + ' MB). Confira e toque em "Usar este vídeo".';
+}
+function pararGravacao() {                                     // sair da tela de gravação sem salvar
+  clearInterval(timerGrav);
+  if (gravador && gravador.state !== 'inactive') { gravador.onstop = null; try { gravador.stop(); } catch (e) {} }
+  gravador = null;
+  if (streamVid) { streamVid.getTracks().forEach(t => t.stop()); streamVid = null; }
+  try { if (travaTela) { travaTela.release(); travaTela = null; } } catch (e) {}
+}
+async function guardarVideo(blob, mime, duracao) {
+  const item = { fotoId: novoId(), devId: dev.id, tipo: tipoVideo(), kind: 'video', blob: blob, mime: mime || blob.type || 'video/webm', total: blob.size, duracao: duracao || 0, criadaEm: Date.now(), tentativas: 0, estado: 'pendente', erro: '' };
+  await fila.salvar(item);
+  minhas.unshift({ fotoId: item.fotoId, devId: item.devId, tipo: item.tipo, video: true, duracao: item.duracao, estado: 'pendente', msg: 'na fila' });
+  abrirFotos(); irEtapa(2);                                    // vídeo guardado: segue para as fotos do produto
+  processarFila();
+}
+$('btnAbrirGravacao').onclick = abrirGravacao;
+$('btnGravar').onclick = () => { if (gravador && gravador.state === 'recording') pararGravando(); else comecarGravacao(); };
+$('btnRegravar').onclick = () => { $('videoDica').textContent = 'Enquadre a caixa fechada. Toque em COMEÇAR e abra devagar, mostrando a fita sendo cortada, a proteção e o produto.'; abrirGravacao(); };
+$('btnUsarVideo').onclick = () => { if (videoPronto) { const v = videoPronto; videoPronto = null; guardarVideo(v.blob, v.mime, v.duracao); } };
+$('btnCancelarVideo').onclick = () => { if (videoPronto && !confirm('Descartar o vídeo gravado?')) return; videoPronto = null; abrirFotos(); irEtapa(1); };
+$('videoNativo').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  if (f.size > 200 * 1024 * 1024) { alert('Vídeo grande demais (' + Math.round(f.size / 1048576) + ' MB; máximo 200 MB). Grave mais curto.'); return; }
+  const dur = await new Promise(ok => { const v = document.createElement('video'); v.preload = 'metadata'; v.onloadedmetadata = () => { ok(isFinite(v.duration) ? v.duration : 0); URL.revokeObjectURL(v.src); }; v.onerror = () => ok(0); v.src = URL.createObjectURL(f); });
+  guardarVideo(f, f.type, dur);
 };
 
 // =====================================================================
@@ -497,12 +672,14 @@ async function processarFila() {
   if (enviando || !sessao.pin) return;
   enviando = true; clearTimeout(timerFila);
   try {
-    const itens = (await fila.todos()).filter(x => x.estado === 'pendente');
+    // fotos primeiro (rápidas); o vídeo sobe depois, em partes
+    const itens = (await fila.todos()).filter(x => x.estado === 'pendente').sort((a, b) => ((a.kind === 'video') - (b.kind === 'video')) || (a.criadaEm - b.criadaEm));
     for (const item of itens) {
       marcar(item.fotoId, 'pendente', 'enviando…');
       let r;
       try {
-        r = await chamar({ action: 'devFotoEnviar', id: item.devId, qr: item.qr || '', operador: sessao.nome, pin: sessao.pin, fotoId: item.fotoId, tipo: item.tipo, imagem: item.imagem, aparelho: aparelho() }, 90000);
+        r = item.kind === 'video' ? await enviarVideo(item)
+          : await chamar({ action: 'devFotoEnviar', id: item.devId, qr: item.qr || '', operador: sessao.nome, pin: sessao.pin, fotoId: item.fotoId, tipo: item.tipo, imagem: item.imagem, aparelho: aparelho() }, 90000);
       } catch (e) {                                            // sem internet / servidor lento: tenta de novo sozinho
         item.tentativas++; await fila.salvar(item);
         marcar(item.fotoId, 'pendente', 'aguardando internet');
@@ -512,7 +689,7 @@ async function processarFila() {
       }
       espera = 3000;
       if (r.status === 'ok') {
-        await fila.remover(item.fotoId);
+        await fila.remover(item.fotoId); try { localStorage.removeItem('dc_dev_prog_' + item.fotoId); } catch (x) {}
         marcar(item.fotoId, 'enviada', 'enviada');
         if (dev && r.id === dev.id) { dev.fotos = r.fotos; dev.fotosFaltando = r.fotosFaltando; if ($('telaFotos').classList.contains('oculto') === false) desenharTipos(); }
         if (navigator.vibrate) navigator.vibrate(40);
@@ -532,6 +709,24 @@ async function processarFila() {
     }
   } finally { enviando = false; atualizarAvisoFila(); }
 }
+const PARTE_VIDEO = window.DC_TESTE_PARTE || 4 * 1024 * 1024;   // múltiplo de 256 KB (exigência do Drive); DC_TESTE_PARTE só nos testes
+function blobBase64(b) { return new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => erro(r.error); r.readAsDataURL(b); }); }
+// Envia o vídeo parte por parte; o progresso fica guardado no aparelho (continua de onde parou)
+async function enviarVideo(item) {
+  const chave = 'dc_dev_prog_' + item.fotoId;
+  let desde = Number(localStorage.getItem(chave)) || 0, voltas = 0;
+  while (voltas++ < 500) {
+    marcar(item.fotoId, 'pendente', 'enviando ' + Math.floor(desde * 100 / item.total) + '%');
+    const dados = await blobBase64(item.blob.slice(desde, Math.min(desde + PARTE_VIDEO, item.total)));
+    const r = await chamar({ action: 'devVideoParte', id: item.devId, videoId: item.fotoId, total: item.total, inicio: desde, mime: item.mime, duracao: item.duracao,
+      dados: dados, operador: sessao.nome, pin: sessao.pin, aparelho: aparelho() }, 120000);
+    if (r.status === 'retomar') { desde = Number(r.desde) || 0; try { localStorage.setItem(chave, String(desde)); } catch (x) {} continue; }
+    if (r.status !== 'ok' || r.concluido) return r;
+    desde = Number(r.recebido) || 0;
+    try { localStorage.setItem(chave, String(desde)); } catch (x) {}
+  }
+  return { status: 'erro', codigo: 'servidor', msg: 'Envio do vídeo não avançou.' };
+}
 function marcar(fotoId, estado, msg) {
   const m = minhas.find(x => x.fotoId === fotoId);
   if (m) { m.estado = estado; m.msg = msg; }
@@ -539,7 +734,8 @@ function marcar(fotoId, estado, msg) {
 }
 async function atualizarAvisoFila() {
   const l = await fila.todos(), pend = l.filter(x => x.estado === 'pendente').length, err = l.filter(x => x.estado === 'erro').length;
-  const txt = (pend ? '⏳ ' + pend + ' foto(s) aguardando envio — sai sozinho quando tiver internet. ' : '') + (err ? '⚠ ' + err + ' foto(s) recusada(s) — veja a galeria.' : '');
+  const temVideo = l.some(x => x.estado === 'pendente' && x.kind === 'video');
+  const txt = (pend ? '⏳ ' + pend + ' item(ns) aguardando envio' + (temVideo ? ' (vídeo incluído: mantenha o app aberto)' : '') + ' — sai sozinho quando tiver internet. ' : '') + (err ? '⚠ ' + err + ' item(ns) recusado(s) — veja a galeria.' : '');
   ['filaLer', 'filaFotos'].forEach(id => { $(id).textContent = txt; $(id).classList.toggle('oculto', !txt); });
 }
 window.addEventListener('online', () => { espera = 3000; processarFila(); });
@@ -551,7 +747,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) proc
 (async function () {
   // fotos que ficaram na fila de uma vez anterior aparecem na galeria
   try {
-    for (const it of await fila.todos()) minhas.push({ fotoId: it.fotoId, devId: it.devId, tipo: it.tipo, mini: await miniatura(it.imagem), estado: it.estado, msg: it.estado === 'erro' ? it.erro : 'na fila' });
+    for (const it of await fila.todos()) minhas.push({ fotoId: it.fotoId, devId: it.devId, tipo: it.tipo, video: it.kind === 'video', duracao: it.duracao, mini: it.kind === 'video' ? '' : await miniatura(it.imagem), estado: it.estado, msg: it.estado === 'erro' ? it.erro : 'na fila' });
   } catch (e) {}
   if (!sessao.nome || !sessao.pin || /COLE_AQUI/.test(api())) abrirLogin();
   else { abrirLeitura(); processarFila(); }
