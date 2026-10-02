@@ -441,7 +441,7 @@ $('btnOutra').onclick = () => abrirLeitura();
 const ETAPAS = [
   { nome: 'Caixa fechada', dica: 'Antes de abrir: a etiqueta e todos os lados da caixa.', tipos: ['Etiqueta', 'Caixa (todos os lados)'] },
   { nome: 'Vídeo da abertura', dica: 'Grave do primeiro corte da fita até o produto aparecer inteiro.', video: true },
-  { nome: 'Produto', dica: 'Depois de aberta: a proteção, o produto inteiro e o defeito de perto.', tipos: ['Interior / proteção', 'Produto inteiro', 'Defeito de perto', 'Etiqueta do fornecedor', 'Outra'] }
+  { nome: 'Produto', dica: 'Depois de aberta: a proteção, o produto inteiro e o defeito de perto (se não houver defeito, pode terminar sem essa foto).', tipos: ['Interior / proteção', 'Produto inteiro', 'Defeito de perto', 'Etiqueta do fornecedor', 'Outra'] }
 ];
 let etapa = 0;
 const tipoVideo = () => (dev && dev.tipoVideo) || 'Vídeo da abertura';
