@@ -99,6 +99,22 @@
   .miniatura .filme{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding-bottom:24px;font-size:30px;background:#2a1f18}
   .miniatura .filme b{font:700 13px var(--mono);color:var(--brand2);margin-top:4px}
   .fila{font-size:13px;color:var(--warn);text-align:center}
+  header .admin-link{background:none;border:1px solid var(--bd);color:var(--brand2);border-radius:10px;padding:7px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  header .admin-link:hover{border-color:var(--brand);background:rgba(176,134,98,.1)}
+  .admin-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .admin-cab h2{margin:0}
+  .admin-lista{display:grid;gap:10px}
+  .admin-item{border:1px solid var(--bd);background:var(--p2);border-radius:14px;padding:12px}
+  .admin-item .linha{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .admin-item .titulo{font:800 15px var(--mono);color:#fff;overflow-wrap:anywhere}
+  .admin-item .meta{font-size:12px;color:var(--mut);margin-top:4px;line-height:1.45}
+  .admin-item .pct{font:800 15px var(--mono);color:var(--brand2);white-space:nowrap}
+  .admin-barra{height:7px;background:#100d0b;border-radius:99px;overflow:hidden;margin:10px 0}
+  .admin-barra i{display:block;height:100%;background:var(--brand);border-radius:99px}
+  .admin-acoes{display:flex;gap:8px}
+  .admin-acoes .btn{min-height:42px;padding:9px 12px;font-size:13px}
+  .admin-acoes .btn.perigo{border-color:rgba(217,88,75,.7);color:#ffb4ab}
+  .admin-vazio{padding:22px 12px;text-align:center;color:var(--mut);border:1px dashed var(--bd);border-radius:14px}
 </style>
 </head>
 <body>
@@ -106,6 +122,7 @@
   <div class="logo">DC</div>
   <h1>Fotos de devolução<small id="subtitulo">D Coração Home</small></h1>
   <div class="quem" id="quem"></div>
+  <button class="admin-link" id="btnAdminAcesso" type="button">Admin</button>
 </header>
 
 <main>
@@ -184,6 +201,25 @@
     <button class="btn sec" id="btnTrocar" type="button">Outra devolução</button>
   </section>
 
+  <!-- ADMINISTRAÇÃO DOS ENVIOS DE VÍDEO -->
+  <section id="telaAdmin" class="oculto">
+    <div class="cartao">
+      <div class="admin-cab"><h2>Administração dos vídeos</h2><button class="btn sec" id="btnAdminVoltar" type="button" style="width:auto;min-height:40px;padding:8px 12px">Voltar</button></div>
+      <div id="adminLogin">
+        <div class="rodape" style="text-align:left;margin-bottom:10px">Acesso exclusivo do administrador para cancelar vídeos que estão presos na fila de envio.</div>
+        <label class="campo"><span>Nome</span><input class="in" id="adminNome" value="João" autocomplete="off"></label>
+        <label class="campo"><span>Senha</span><input class="in" id="adminPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></label>
+        <div id="adminErro" class="aviso err oculto" style="margin-bottom:12px"></div>
+        <button class="btn pri" id="btnAdminEntrar" type="button">Entrar como administrador</button>
+      </div>
+      <div id="adminPainel" class="oculto">
+        <div class="rodape" style="text-align:left;margin-bottom:10px">Vídeos que ainda têm sessão de upload no servidor e vídeos pendentes neste celular.</div>
+        <button class="btn sec" id="btnAdminAtualizar" type="button" style="margin-bottom:12px">↻ Atualizar lista</button>
+        <div id="adminLista" class="admin-lista"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- GRAVAÇÃO DO VÍDEO DA ABERTURA -->
   <section id="telaVideo" class="oculto">
     <div class="faixa"><div><div class="dev-id" id="vId"></div><small>Vídeo da abertura</small></div></div>
@@ -217,7 +253,7 @@ let tipoAtual = '';
 const minhas = [];          // fotos desta sessão (para a galeria)
 
 function tela(nome) {
-  ['Login', 'Ler', 'Escolher', 'Confirmar', 'Fotos', 'Video'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
+  ['Login', 'Ler', 'Escolher', 'Confirmar', 'Fotos', 'Video', 'Admin'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
   if (nome !== 'Video') pararGravacao();
   $('quem').innerHTML = sessao.nome && nome !== 'Login' ? esc(sessao.nome) + '<br><button type="button" id="btnSair">sair</button>' : '';
   if ($('btnSair')) $('btnSair').onclick = () => { localStorage.removeItem(K.pin); sessao.pin = ''; pararCamera(); abrirLogin(); };
@@ -698,6 +734,10 @@ async function processarFila() {
         marcar(item.fotoId, 'pendente', 'aguardando login');
         abrirLogin(); mostrarErroLogin(r.msg + ' (as fotos continuam guardadas no celular)');
         return;
+      } else if (r.codigo === 'cancelado') {
+        await fila.remover(item.fotoId);
+        try { localStorage.removeItem('dc_dev_prog_' + item.fotoId); localStorage.removeItem('dc_dev_reconcile_' + item.fotoId); } catch (x) {}
+        marcar(item.fotoId, 'erro', 'excluído pelo administrador');
       } else if (r.codigo === 'servidor') {
         item.tentativas++; await fila.salvar(item);
         marcar(item.fotoId, 'pendente', 'tentando de novo');
@@ -776,6 +816,7 @@ async function enviarVideo(item) {
         }
 
         if (r.codigo === 'pin') return r;
+        if (r.codigo === 'cancelado') return r;
         if (r.codigo === 'fechada' || r.codigo === 'invalido' || r.codigo === 'inexistente') return r;
 
         if (r.status === 'ok') {
@@ -834,6 +875,90 @@ async function atualizarAvisoFila() {
 }
 window.addEventListener('online', () => { espera = 3000; processarFila(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) processarFila(); });
+
+// =====================================================================
+// ADMIN — cancelamento de vídeos ainda em envio
+// =====================================================================
+let adminSessao = { nome: '', pin: '' };
+function mostrarErroAdmin(m) { $('adminErro').textContent = m || ''; $('adminErro').classList.toggle('oculto', !m); }
+function abrirAdmin() {
+  pararCamera();
+  tela('Admin');
+  mostrarErroAdmin('');
+  $('adminPin').value = '';
+  $('adminLogin').classList.toggle('oculto', !adminSessao.pin);
+  $('adminPainel').classList.toggle('oculto', !adminSessao.pin);
+  if (adminSessao.pin) carregarAdminVideos();
+}
+function formatarDataAdmin(v) {
+  const n = Number(v) || 0;
+  return n ? new Date(n).toLocaleString('pt-BR') : 'data não informada';
+}
+function formatarMBAdmin(n) { return (Number(n || 0) / 1048576).toFixed(1) + ' MB'; }
+async function listarVideosAdmin() {
+  const r = await chamar({ action: 'devVideoAdminLista', nome: adminSessao.nome, pin: adminSessao.pin }, 30000);
+  if (r.status !== 'ok') throw new Error(r.msg || 'Não consegui consultar os vídeos.');
+  const locais = (await fila.todos()).filter(x => x.kind === 'video' && x.estado === 'pendente');
+  const porId = {}; locais.forEach(x => { porId[x.fotoId] = x; });
+  return (r.videos || []).map(v => Object.assign({}, v, { local: porId[v.videoId] || null }));
+}
+async function carregarAdminVideos() {
+  const box = $('adminLista');
+  box.innerHTML = '<div class="admin-vazio"><span class="gira">⏳</span> Consultando envios…</div>';
+  try {
+    const videos = await listarVideosAdmin();
+    const locais = (await fila.todos()).filter(x => x.kind === 'video' && x.estado === 'pendente');
+    const idsServidor = new Set(videos.map(v => v.videoId));
+    locais.forEach(item => { if (!idsServidor.has(item.fotoId)) videos.push({ videoId:item.fotoId, id:item.devId, total:item.total, recebido:0, criado:item.criadaEm, mime:item.mime, operador:'Este celular', local:item, semSessao:true }); });
+    videos.sort((a,b) => (Number(a.criado)||0) - (Number(b.criado)||0));
+    if (!videos.length) { box.innerHTML = '<div class="admin-vazio">Nenhum vídeo pendente ou em envio.</div>'; return; }
+    box.innerHTML = videos.map(v => {
+      const total = Math.max(1, Number(v.total)||1), recebido = Math.max(0, Math.min(Number(v.recebido)||0, total));
+      const pct = Math.floor(recebido * 100 / total);
+      const situacao = v.semSessao ? 'Pendente neste celular, sem sessão ativa no servidor.' : (v.operador ? 'Operador: ' + esc(v.operador) : 'Sessão de upload ativa');
+      return '<div class="admin-item">' +
+        '<div class="linha"><div><div class="titulo">' + esc(v.videoId) + '</div><div class="meta">' + esc(v.id || 'Devolução não informada') + ' · ' + esc(formatarMBAdmin(v.total)) + '<br>' + esc(formatarDataAdmin(v.criado)) + '<br>' + esc(situacao) + '</div></div><div class="pct">' + pct + '%</div></div>' +
+        '<div class="admin-barra"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="admin-acoes"><button class="btn perigo" type="button" data-admin-excluir="' + esc(v.videoId) + '">Excluir envio</button></div>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="aviso err"><b>Não consegui carregar os vídeos.</b>' + esc(mensagemErroVideo(e)) + '</div>';
+  }
+}
+$('btnAdminAcesso').onclick = abrirAdmin;
+$('btnAdminVoltar').onclick = () => { adminSessao = { nome:'', pin:'' }; if (sessao.nome && sessao.pin) abrirLeitura(); else abrirLogin(); };
+$('btnAdminEntrar').onclick = async () => {
+  const nome = $('adminNome').value.trim(), pin = $('adminPin').value.trim();
+  if (!nome || !pin) { mostrarErroAdmin('Informe o nome e a senha do administrador.'); return; }
+  $('btnAdminEntrar').disabled = true; $('btnAdminEntrar').innerHTML = '<span class="gira">⏳</span> Verificando…';
+  try {
+    const r = await chamar({ action:'devVideoAdminLogin', nome:nome, pin:pin }, 20000);
+    if (r.status !== 'ok') { mostrarErroAdmin(r.msg || 'Acesso negado.'); return; }
+    adminSessao = { nome:r.nome, pin:pin };
+    $('adminLogin').classList.add('oculto'); $('adminPainel').classList.remove('oculto');
+    await carregarAdminVideos();
+  } catch (e) { mostrarErroAdmin(mensagemErroVideo(e)); }
+  finally { $('btnAdminEntrar').disabled = false; $('btnAdminEntrar').textContent = 'Entrar como administrador'; }
+};
+$('btnAdminAtualizar').onclick = carregarAdminVideos;
+$('adminLista').addEventListener('click', async e => {
+  const b = e.target.closest('[data-admin-excluir]'); if (!b) return;
+  const videoId = b.dataset.adminExcluir;
+  if (!confirm('Excluir o envio deste vídeo?\n\nO vídeo será cancelado no servidor e removido da fila deste celular, quando existir.')) return;
+  b.disabled = true; b.textContent = 'Excluindo…';
+  try {
+    const r = await chamar({ action:'devVideoAdminExcluir', nome:adminSessao.nome, pin:adminSessao.pin, videoId:videoId }, 30000);
+    if (r.status !== 'ok') throw new Error(r.msg || 'Não consegui excluir o vídeo.');
+    await fila.remover(videoId);
+    try { localStorage.removeItem('dc_dev_prog_' + videoId); localStorage.removeItem('dc_dev_reconcile_' + videoId); } catch (x) {}
+    const i = minhas.findIndex(m => m.fotoId === videoId); if (i >= 0) minhas.splice(i, 1);
+    await carregarAdminVideos(); atualizarAvisoFila();
+  } catch (e) {
+    b.disabled = false; b.textContent = 'Excluir envio';
+    alert('Não consegui excluir: ' + mensagemErroVideo(e));
+  }
+});
 
 // =====================================================================
 // INÍCIO
