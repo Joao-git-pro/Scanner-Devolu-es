@@ -542,7 +542,7 @@ function desenharGaleria() {
 $('galeria').addEventListener('click', async e => {
   const b = e.target.closest('[data-descartar]'); if (!b) return;
   if (!confirm('Descartar este item? Ele não foi enviado.')) return;
-  await fila.remover(b.dataset.descartar); try { localStorage.removeItem('dc_dev_prog_' + b.dataset.descartar); } catch (x) {}
+  await fila.remover(b.dataset.descartar); try { localStorage.removeItem('dc_dev_prog_' + b.dataset.descartar); localStorage.removeItem('dc_dev_reconcile_' + b.dataset.descartar); } catch (x) {}
   const i = minhas.findIndex(m => m.fotoId === b.dataset.descartar); if (i >= 0) minhas.splice(i, 1);
   desenharGaleria(); atualizarAvisoFila();
 });
@@ -557,7 +557,7 @@ async function terminar() {
 function duracaoTxt(s) { s = Math.round(Number(s) || 0); return s ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : 'vídeo'; }
 
 // =====================================================================
-// VÍDEO DA ABERTURA — gravado no próprio app (720p, ~1,5 Mbps, até 3 min: 1 min ≈ 12 MB).
+// VÍDEO DA ABERTURA — gravado no próprio app (720p, ~1 Mbps de vídeo + áudio opcional, até 3 min).
 // A câmera nativa grava 100 MB+ por minuto; por isso ela fica só como alternativa.
 // =====================================================================
 const VIDEO_MAX_S = 180;
@@ -589,7 +589,7 @@ function comecarGravacao() {
   if (!streamVid) return;
   const mime = mimeVideo();
   pedacos = [];
-  try { gravador = new MediaRecorder(streamVid, Object.assign({ videoBitsPerSecond: 1500000, audioBitsPerSecond: 64000 }, mime ? { mimeType: mime } : {})); }
+  try { gravador = new MediaRecorder(streamVid, Object.assign({ videoBitsPerSecond: 1000000, audioBitsPerSecond: 64000 }, mime ? { mimeType: mime } : {})); }
   catch (e) { gravador = new MediaRecorder(streamVid); }
   gravador.ondataavailable = e => { if (e.data && e.data.size) pedacos.push(e.data); };
   gravador.onstop = fimGravacao;
@@ -682,9 +682,10 @@ async function processarFila() {
           : await chamar({ action: 'devFotoEnviar', id: item.devId, qr: item.qr || '', operador: sessao.nome, pin: sessao.pin, fotoId: item.fotoId, tipo: item.tipo, imagem: item.imagem, aparelho: aparelho() }, 90000);
       } catch (e) {                                            // sem internet / servidor lento: tenta de novo sozinho
         item.tentativas++; await fila.salvar(item);
-        marcar(item.fotoId, 'pendente', 'aguardando internet');
-        espera = Math.min(espera * 2, 60000);
-        timerFila = setTimeout(processarFila, espera);
+        const detalhe = mensagemErroVideo(e);
+        marcar(item.fotoId, 'pendente', (item.kind === 'video' ? 'falha: ' : 'aguardando internet · ') + detalhe.slice(0, 110));
+        espera = Math.min(espera * 2, item.kind === 'video' ? 60000 : 60000);
+        timerFila = setTimeout(processarFila, item.kind === 'video' ? Math.max(15000, espera) : espera);
         return;
       }
       espera = 3000;
@@ -709,23 +710,116 @@ async function processarFila() {
     }
   } finally { enviando = false; atualizarAvisoFila(); }
 }
-const PARTE_VIDEO = window.DC_TESTE_PARTE || 4 * 1024 * 1024;   // múltiplo de 256 KB (exigência do Drive); DC_TESTE_PARTE só nos testes
-function blobBase64(b) { return new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => erro(r.error); r.readAsDataURL(b); }); }
-// Envia o vídeo parte por parte; o progresso fica guardado no aparelho (continua de onde parou)
+const PARTE_VIDEO = window.DC_TESTE_PARTE || 3 * 1024 * 1024;   // 3 MB = 12 × 256 KB; parte final pode ser menor
+const VIDEO_TENTATIVAS_POR_PARTE = 3;
+const VIDEO_TIMEOUT = 180000; // 3 min por chamada ao Apps Script
+function blobBase64(b) {
+  return new Promise((ok, erro) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1] || '');
+    r.onerror = () => erro(r.error || new Error('Não consegui preparar a parte do vídeo.'));
+    r.readAsDataURL(b);
+  });
+}
+function esperar(ms) { return new Promise(ok => setTimeout(ok, ms)); }
+function salvarProgressoVideo(chave, valor) {
+  try { localStorage.setItem(chave, String(valor)); } catch (e) {}
+}
+function lerProgressoVideo(chave, total) {
+  let n = 0;
+  try { n = Number(localStorage.getItem(chave)) || 0; } catch (e) {}
+  n = Math.max(0, Math.min(n, total));
+  return n;
+}
+function mensagemErroVideo(e) {
+  return String((e && e.message) || e || 'Falha no envio.');
+}
+
+// Envia o vídeo parte por parte. Cada parte só avança quando o servidor confirma
+// quantos bytes o Drive realmente recebeu. Em caso de timeout, a próxima tentativa
+// pergunta ao servidor onde o Drive parou antes de reenviar qualquer parte.
 async function enviarVideo(item) {
   const chave = 'dc_dev_prog_' + item.fotoId;
-  let desde = Number(localStorage.getItem(chave)) || 0, voltas = 0;
-  while (voltas++ < 500) {
-    marcar(item.fotoId, 'pendente', 'enviando ' + Math.floor(desde * 100 / item.total) + '%');
-    const dados = await blobBase64(item.blob.slice(desde, Math.min(desde + PARTE_VIDEO, item.total)));
-    const r = await chamar({ action: 'devVideoParte', id: item.devId, videoId: item.fotoId, total: item.total, inicio: desde, mime: item.mime, duracao: item.duracao,
-      dados: dados, operador: sessao.nome, pin: sessao.pin, aparelho: aparelho() }, 120000);
-    if (r.status === 'retomar') { desde = Number(r.desde) || 0; try { localStorage.setItem(chave, String(desde)); } catch (x) {} continue; }
-    if (r.status !== 'ok' || r.concluido) return r;
-    desde = Number(r.recebido) || 0;
-    try { localStorage.setItem(chave, String(desde)); } catch (x) {}
+  let desde = lerProgressoVideo(chave, item.total);
+  const chaveReconcilia = 'dc_dev_reconcile_' + item.fotoId;
+  let reconciliar = false;
+  try { reconciliar = localStorage.getItem(chaveReconcilia) === '1'; } catch (e) {}
+  let totalFalhasConsecutivas = 0;
+
+  while (desde < item.total) {
+    const fimTeorico = Math.min(desde + PARTE_VIDEO, item.total);
+    const parte = item.blob.slice(desde, fimTeorico);
+    const tamanhoParte = parte.size;
+    if (!tamanhoParte) throw new Error('O vídeo terminou antes do esperado. Grave novamente.');
+
+    let confirmou = false;
+    for (let tentativa = 1; tentativa <= VIDEO_TENTATIVAS_POR_PARTE; tentativa++) {
+      marcar(item.fotoId, 'pendente', 'enviando ' + Math.floor(desde * 100 / item.total) + '% · tentativa ' + tentativa + '/' + VIDEO_TENTATIVAS_POR_PARTE);
+      try {
+        const dados = await blobBase64(parte);
+        const r = await chamar({
+          action: 'devVideoParte', id: item.devId, videoId: item.fotoId,
+          total: item.total, inicio: desde, mime: item.mime, duracao: item.duracao,
+          dados: dados, operador: sessao.nome, pin: sessao.pin, aparelho: aparelho(),
+          reconciliar: reconciliar
+        }, VIDEO_TIMEOUT);
+
+        if (r.status === 'retomar') {
+          const servidorDesde = Math.max(0, Math.min(Number(r.desde) || 0, item.total));
+          salvarProgressoVideo(chave, servidorDesde);
+          try { localStorage.removeItem(chaveReconcilia); } catch (e) {}
+          reconciliar = false;
+          desde = servidorDesde;
+          totalFalhasConsecutivas = 0;
+          confirmou = true;
+          break;
+        }
+
+        if (r.codigo === 'pin') return r;
+        if (r.codigo === 'fechada' || r.codigo === 'invalido' || r.codigo === 'inexistente') return r;
+
+        if (r.status === 'ok') {
+          const recebido = Math.max(0, Math.min(Number(r.recebido) || 0, item.total));
+          if (r.concluido) {
+            salvarProgressoVideo(chave, item.total);
+            try { localStorage.removeItem(chaveReconcilia); } catch (e) {}
+            return r;
+          }
+          if (recebido <= desde) {
+            throw new Error('O servidor respondeu sem avançar o envio (ficou em ' + Math.floor(recebido * 100 / item.total) + '%).');
+          }
+          salvarProgressoVideo(chave, recebido);
+          try { localStorage.removeItem(chaveReconcilia); } catch (e) {}
+          reconciliar = false;
+          desde = recebido;
+          totalFalhasConsecutivas = 0;
+          confirmou = true;
+          break;
+        }
+
+        const detalhe = r.msg || (r.codigo ? 'código ' + r.codigo : 'resposta inesperada do servidor');
+        throw new Error(detalhe);
+      } catch (e) {
+        totalFalhasConsecutivas++;
+        reconciliar = true;
+        try { localStorage.setItem(chaveReconcilia, '1'); } catch (x) {}
+        if (tentativa < VIDEO_TENTATIVAS_POR_PARTE) {
+          const esperaMs = Math.min(12000, 2000 * tentativa);
+          marcar(item.fotoId, 'pendente', 'falha temporária · verificando o envio (' + tentativa + '/' + VIDEO_TENTATIVAS_POR_PARTE + ')');
+          await esperar(esperaMs);
+          continue;
+        }
+        throw new Error('Parte em ' + Math.floor(desde * 100 / item.total) + '% não confirmou após ' + VIDEO_TENTATIVAS_POR_PARTE + ' tentativas: ' + mensagemErroVideo(e));
+      }
+    }
+
+    if (!confirmou) throw new Error('O envio do vídeo não avançou.');
+    if (totalFalhasConsecutivas >= VIDEO_TENTATIVAS_POR_PARTE) {
+      throw new Error('O envio do vídeo não conseguiu confirmar a próxima parte.');
+    }
   }
-  return { status: 'erro', codigo: 'servidor', msg: 'Envio do vídeo não avançou.' };
+
+  return { status: 'erro', codigo: 'servidor', msg: 'O vídeo chegou ao fim, mas o servidor não confirmou a finalização.' };
 }
 function marcar(fotoId, estado, msg) {
   const m = minhas.find(x => x.fotoId === fotoId);
