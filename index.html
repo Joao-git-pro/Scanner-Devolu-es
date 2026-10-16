@@ -26,12 +26,14 @@
   header .quem{margin-left:auto;text-align:right;font-size:12px;color:var(--mut)}
   header .quem button{background:none;border:0;color:var(--brand2);font-size:12px;text-decoration:underline}
   main{flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;max-width:560px;width:100%;margin:0 auto}
+  body.pc main{max-width:760px}
   .cartao{background:var(--p1);border:1px solid var(--bd);border-radius:16px;padding:16px}
   .cartao h2{font-size:17px;margin-bottom:10px}
   .campo{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
   .campo span{font-size:13px;color:var(--mut);font-weight:600}
   .in{background:var(--bg);border:1.5px solid var(--bd);border-radius:12px;padding:13px 14px;font-size:17px;width:100%;outline:none}
   .in:focus{border-color:var(--brand)}
+  select.in.peq{font-size:14px;padding:10px 12px}
   .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:1.5px solid var(--bd);background:var(--p2);border-radius:14px;padding:15px;font-weight:700;font-size:16px;min-height:54px}
   .btn.pri{background:var(--brand);border-color:var(--brand);color:#1a120c}
   .btn.ok{background:var(--ok);border-color:var(--ok);color:#0c1a10}
@@ -74,7 +76,9 @@
   .tipo .ok{color:var(--ok)}
   .disparo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--brand);color:#1a120c;border-radius:20px;min-height:88px;font-size:20px;font-weight:800;border:0;width:100%}
   .disparo small{font-size:14px;font-weight:700;opacity:.85}
+  .disparo:disabled{opacity:.5}
   .galeria{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  body.pc .galeria{grid-template-columns:repeat(4,1fr)}
   .miniatura{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1}
   .miniatura img{width:100%;height:100%;object-fit:cover;display:block}
   .miniatura .estado{position:absolute;left:0;right:0;bottom:0;font-size:11.5px;font-weight:700;padding:4px 6px;background:rgba(0,0,0,.72)}
@@ -94,7 +98,13 @@
   .disparo.gravar{background:#c62828;color:#fff}
   .disparo.parar{background:#fff;color:#c62828}
   .camera.alta{aspect-ratio:3/4}
+  .camera.larga{aspect-ratio:16/9}
+  .camera.larga video{object-fit:contain}
+  body.pc .camera.alta{aspect-ratio:16/9}
+  body.pc .camera.alta video{object-fit:contain}
   .camera video.rev{position:absolute;inset:0;width:100%;height:100%;background:#000}
+  .camera .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .35s}
+  .camera .flash.on{opacity:.85;transition:none}
   .rec{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.65);padding:5px 12px;border-radius:99px;font-weight:800;color:#ff8a80;font-size:15px;display:flex;align-items:center;gap:8px}
   .rec i{width:11px;height:11px;border-radius:50%;background:#ff3b30;animation:pisca 1s infinite}
   @keyframes pisca{50%{opacity:.25}}
@@ -155,7 +165,8 @@
       </label>
     </div>
     <div class="camera"><video id="video" playsinline muted></video><div class="mira"></div><div class="msg" id="camMsg">Ou aponte para o código de barras do rastreio</div></div>
-    <label class="btn sec">📷 Ler a etiqueta por foto<input id="qrFoto" type="file" accept="image/*" capture="environment" hidden></label>
+    <label class="campo oculto" id="lSelBox" style="margin-bottom:0"><span>Câmera</span><select class="in peq" id="selCamLer"></select></label>
+    <label class="btn sec"><span id="txtQrFoto">📷 Ler a etiqueta por foto</span><input id="qrFoto" type="file" accept="image/*" capture="environment" hidden></label>
     <p class="fila oculto" id="filaLer"></p>
   </section>
 
@@ -194,7 +205,7 @@
     <div id="blocoVideo" class="oculto">
       <button class="disparo gravar" id="btnAbrirGravacao" type="button"><span>● GRAVAR A ABERTURA</span><small>até 3 minutos</small></button>
       <div class="rodape" id="videoSituacao" style="margin-top:8px"></div>
-      <label class="btn sec" style="margin-top:8px;min-height:44px;font-size:14px">Usar a câmera do celular<input id="videoNativo" type="file" accept="video/*" capture="environment" hidden></label>
+      <label class="btn sec" style="margin-top:8px;min-height:44px;font-size:14px"><span id="txtVideoNativo">Usar a câmera do celular</span><input id="videoNativo" type="file" accept="video/*" capture="environment" hidden></label>
     </div>
     <div class="faltam" id="faltam"></div>
     <div class="galeria" id="galeria"></div>
@@ -205,6 +216,19 @@
       <button class="btn pri" id="btnProxima" type="button">Próxima etapa →</button>
     </div>
     <button class="btn sec" id="btnTrocar" type="button">Outra devolução</button>
+  </section>
+
+  <!-- FOTOS PELA WEBCAM DO NOTEBOOK -->
+  <section id="telaWebcam" class="oculto">
+    <div class="faixa"><div><div class="dev-id" id="wId"></div><small id="wTipo"></small></div></div>
+    <div class="camera larga"><video id="videoWeb" playsinline muted></video><div class="flash" id="flashWeb"></div></div>
+    <label class="campo oculto" id="wSelBox" style="margin-bottom:0"><span>Câmera</span><select class="in peq" id="selCamWeb"></select></label>
+    <div class="tipos" id="tiposWeb"></div>
+    <div id="webErro" class="aviso err oculto"></div>
+    <button class="disparo" id="btnCapturar" type="button" disabled><span>📷 CAPTURAR FOTO</span><small id="webContagem"></small></button>
+    <div class="rodape">Dica: a barra de espaço também tira a foto.</div>
+    <button class="btn sec" id="btnWebArquivo" type="button" style="min-height:44px;font-size:14px">📁 Escolher foto do computador</button>
+    <button class="btn pri" id="btnWebFechar" type="button">Concluir</button>
   </section>
 
   <!-- ADMINISTRAÇÃO DOS ENVIOS DE VÍDEO -->
@@ -231,6 +255,7 @@
     <div class="faixa"><div><div class="dev-id" id="vId"></div><small>Vídeo da abertura</small></div></div>
     <div class="camera alta"><video id="videoGrav" playsinline muted></video><video id="videoRev" class="rev oculto" playsinline controls></video>
       <div class="rec oculto" id="recInd"><i></i><span id="recTempo">0:00</span><span style="color:var(--mut);font-weight:600">/ 3:00</span></div></div>
+    <label class="campo oculto" id="vSelBox" style="margin-bottom:0"><span>Câmera</span><select class="in peq" id="selCamVid"></select></label>
     <p class="rodape" style="text-align:left" id="videoDica">Enquadre a caixa fechada. Toque em COMEÇAR e abra devagar, mostrando a fita sendo cortada, a proteção e o produto.</p>
     <div id="videoErro" class="aviso err oculto"></div>
     <button class="disparo gravar" id="btnGravar" type="button"><span id="btnGravarTxt">● COMEÇAR A GRAVAR</span></button>
@@ -248,7 +273,7 @@
 // colar pelo próprio app, em "Configurar endereço do sistema".
 // ===================================================================
 const API_PADRAO = 'https://script.google.com/macros/s/AKfycbyJm6ENKr9hUyLvRihiF09O45SSGgZZCY5VxDTIdg7O40BnJtkpjlVBvu63zIHOHVfY8Q/exec';
-const K = { api: 'dc_dev_api', nome: 'dc_dev_nome', pin: 'dc_dev_pin' };
+const K = { api: 'dc_dev_api', nome: 'dc_dev_nome', pin: 'dc_dev_pin', cam: 'dc_dev_cam' };
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -258,9 +283,23 @@ let dev = null;             // devolução confirmada (a que recebe as fotos ago
 let tipoAtual = '';
 const minhas = [];          // fotos desta sessão (para a galeria)
 
+// Notebook/computador (webcam) x celular/tablet (câmera nativa do aparelho)
+const ua0 = navigator.userAgent || '';
+const ehPC = !/Android|iPhone|iPad|iPod|Mobile/i.test(ua0) && !(/Macintosh/.test(ua0) && navigator.maxTouchPoints > 1);
+const temCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+if (ehPC) {
+  document.body.classList.add('pc');
+  $('camera').removeAttribute('capture'); $('camera').multiple = true;
+  $('videoNativo').removeAttribute('capture');
+  $('qrFoto').removeAttribute('capture');
+  $('txtVideoNativo').textContent = 'Escolher um vídeo do computador';
+  $('txtQrFoto').textContent = '📁 Ler a etiqueta de uma imagem';
+}
+
 function tela(nome) {
-  ['Login', 'Ler', 'Escolher', 'Confirmar', 'Fotos', 'Video', 'Admin'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
+  ['Login', 'Ler', 'Escolher', 'Confirmar', 'Fotos', 'Webcam', 'Video', 'Admin'].forEach(t => $('tela' + t).classList.toggle('oculto', t !== nome));
   if (nome !== 'Video') pararGravacao();
+  if (nome !== 'Webcam') pararWebcam();
   $('quem').innerHTML = sessao.nome && nome !== 'Login' ? esc(sessao.nome) + '<br><button type="button" id="btnSair">sair</button>' : '';
   if ($('btnSair')) $('btnSair').onclick = () => { localStorage.removeItem(K.pin); sessao.pin = ''; pararCamera(); abrirLogin(); };
   if (nome !== 'Ler') pararCamera();
@@ -268,9 +307,45 @@ function tela(nome) {
 }
 function aparelho() {
   const ua = navigator.userAgent;
-  const so = (/Android [\d.]+/.exec(ua) || /iPhone OS [\d_]+/.exec(ua) || ['celular'])[0].replace(/_/g, '.');
-  const nav = /SamsungBrowser/.test(ua) ? 'Samsung' : /CriOS|Chrome/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : 'navegador';
-  return so + ' · ' + nav;
+  const so = (/Android [\d.]+/.exec(ua) || /iPhone OS [\d_]+/.exec(ua) || /Windows NT [\d.]+/.exec(ua) || /Mac OS X [\d_]+/.exec(ua) || /Linux/.exec(ua) || ['celular'])[0].replace(/_/g, '.');
+  const nav = /SamsungBrowser/.test(ua) ? 'Samsung' : /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome/.test(ua) ? 'Chrome' : /Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : 'navegador';
+  return so + ' · ' + nav + (ehPC ? ' · webcam' : '');
+}
+
+// ---------- câmeras (celular: traseira; notebook: webcam, com escolha quando houver mais de uma) ----------
+function restricaoCam(extra) {
+  const v = Object.assign({}, extra || {});
+  let id = ''; try { id = localStorage.getItem(K.cam) || ''; } catch (e) {}
+  if (id) v.deviceId = { exact: id };
+  else if (!ehPC) v.facingMode = { ideal: 'environment' };
+  return v;
+}
+async function obterStream(comAudio, extra) {
+  const tentar = () => navigator.mediaDevices.getUserMedia({ video: restricaoCam(extra), audio: !!comAudio });
+  try { return await tentar(); }
+  catch (e) {
+    let salvo = ''; try { salvo = localStorage.getItem(K.cam) || ''; } catch (x) {}
+    if (salvo && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) {      // câmera escolhida antes não existe mais
+      try { localStorage.removeItem(K.cam); } catch (x) {}
+      return await tentar();
+    }
+    throw e;
+  }
+}
+function salvarCam(id) { try { localStorage.setItem(K.cam, id); } catch (e) {} }
+async function preencherCameras(sel, stream) {
+  try {
+    const ds = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    const t = stream && stream.getVideoTracks()[0], atual = t && t.getSettings ? t.getSettings().deviceId : '';
+    sel.innerHTML = ds.map((d, i) => '<option value="' + esc(d.deviceId) + '"' + (d.deviceId === atual ? ' selected' : '') + '>' + esc(d.label || ('Câmera ' + (i + 1))) + '</option>').join('');
+    sel.parentNode.classList.toggle('oculto', ds.length < 2);
+  } catch (e) {}
+}
+function msgCameraNegada(e) {
+  if (e && e.name === 'NotAllowedError') return 'A câmera foi bloqueada. Clique no cadeado ao lado do endereço do site, permita a <b>Câmera</b> (e o <b>Microfone</b>) e tente de novo.';
+  if (e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError')) return 'Nenhuma câmera foi encontrada neste computador.';
+  if (e && (e.name === 'NotReadableError' || e.name === 'AbortError')) return 'A câmera está sendo usada por outro programa. Feche-o (Teams, Zoom, outra aba) e tente de novo.';
+  return 'Não consegui abrir a câmera.';
 }
 
 // ---------- comunicação (POST como texto: o Apps Script não aceita pré-verificação CORS) ----------
@@ -316,13 +391,14 @@ $('lEntrar').onclick = async () => {
   } catch (e) { mostrarErroLogin(e.message); }
   finally { $('lEntrar').disabled = false; $('lEntrar').textContent = 'Entrar'; }
 };
+$('lPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('lEntrar').click(); });
 function mostrarErroLogin(m) { $('lErro').textContent = m; $('lErro').classList.remove('oculto'); }
 $('lApiSalvar').onclick = () => { const v = $('lApi').value.trim(); if (v) localStorage.setItem(K.api, v); else localStorage.removeItem(K.api); abrirLogin(); };
 
 // =====================================================================
 // ACHAR A DEVOLUÇÃO — sem etiqueta QR: o operador digita o nº da devolução (ex.: 125)
 // ou bipa com a câmera a etiqueta de rastreio da caixa. Mesmo leitor do bipador da
-// expedição: nativo do Android (BarcodeDetector) e, sem ele (iPhone), ZXing.
+// expedição: nativo do Android (BarcodeDetector) e, sem ele (iPhone/PC), ZXing.
 // =====================================================================
 const ZXING_URL = 'https://unpkg.com/@zxing/library@0.21.0/umd/index.min.js';
 const FORMATOS = ['code_128', 'qr_code', 'data_matrix', 'code_39', 'itf', 'ean_13', 'pdf417'];
@@ -408,20 +484,22 @@ async function abrirLeitura(erro) {
   lendo = false;
   try {
     await prepararMotor();
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    stream = await obterStream(false, { width: { ideal: 1280 }, height: { ideal: 720 } });
     const v = $('video'); v.srcObject = stream; await v.play();
+    preencherCameras($('selCamLer'), stream);
     laco = setInterval(async () => {
       if (lendo || !v.videoWidth || document.hidden) return;
       try { const c = escolher(await lerQuadro(v, v.videoWidth, v.videoHeight, false)); if (c) aoLer(c); } catch (e) {}
     }, motor === 'nativo' ? 120 : 250);
   } catch (e) {
-    $('camMsg').textContent = 'Câmera indisponível — digite o nº acima ou use "Ler a etiqueta por foto"';
+    $('camMsg').textContent = ehPC ? 'Webcam indisponível — digite o nº acima ou use "Ler a etiqueta de uma imagem"' : 'Câmera indisponível — digite o nº acima ou use "Ler a etiqueta por foto"';
   }
 }
 function pararCamera() {
   clearInterval(laco); laco = null;
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 }
+$('selCamLer').onchange = e => { salvarCam(e.target.value); pararCamera(); abrirLeitura(); };
 $('qrFoto').onchange = async e => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f) return;
@@ -506,6 +584,10 @@ function irEtapa(i) {
   desenharTipos(); desenharGaleria();
   window.scrollTo(0, 0);
 }
+function chipsTipos(et) {
+  return et.tipos.map(t => '<button type="button" class="tipo' + (t === tipoAtual ? ' on' : '') + '" data-t="' + esc(t) + '">' +
+    (enviado(t) ? '<span class="ok">✓ </span>' : naFila(t) ? '⏳ ' : '') + esc(t) + '</button>').join('');
+}
 function desenharTipos() {
   if (!dev) return;
   const et = ETAPAS[etapa], falta = faltandoAgora();
@@ -519,8 +601,7 @@ function desenharTipos() {
   $('blocoVideo').classList.toggle('oculto', !et.video);
   if (et.tipos) {
     // O tipo NÃO troca sozinho dentro da etapa: a caixa pede várias fotos e um pulo automático gravaria a 2ª foto com o tipo errado.
-    $('tipos').innerHTML = et.tipos.map(t => '<button type="button" class="tipo' + (t === tipoAtual ? ' on' : '') + '" data-t="' + esc(t) + '">' +
-      (enviado(t) ? '<span class="ok">✓ </span>' : naFila(t) ? '⏳ ' : '') + esc(t) + '</button>').join('');
+    $('tipos').innerHTML = chipsTipos(et);
     $('disparoTipo').textContent = tipoAtual;
   } else {
     const tv = tipoVideo();
@@ -530,6 +611,7 @@ function desenharTipos() {
   $('faltam').innerHTML = ff.length ? ff.map(t => '<button type="button" data-t="' + esc(t) + '">' + (naFila(t) ? '⏳ ' : 'falta: ') + esc(t) + '</button>').join('') : '<span style="border-color:rgba(111,191,127,.7);color:#a7e0b3">todas as fotos e o vídeo obrigatórios já foram enviados ✓</span>';
   $('btnEtapaAnterior').classList.toggle('oculto', etapa === 0);
   $('btnProxima').textContent = etapa === 2 ? 'Terminei' : 'Próxima etapa →';
+  if (!$('telaWebcam').classList.contains('oculto')) desenharTiposWeb();
 }
 $('etapas').addEventListener('click', e => { const b = e.target.closest('[data-etapa]'); if (b) irEtapa(Number(b.dataset.etapa)); });
 $('tipos').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { tipoAtual = b.dataset.t; desenharTipos(); } });
@@ -541,16 +623,24 @@ $('btnProxima').onclick = () => {
   if (falta.length && !confirm('Ainda falta nesta etapa: ' + falta.join(', ') + '.\n\nAvançar mesmo assim?')) return;
   irEtapa(etapa + 1);
 };
+
+// No notebook, "TIRAR FOTO" abre a webcam (o seletor de arquivo não abre câmera no computador)
+$('disparo').addEventListener('click', e => {
+  if (e.target === $('camera')) return;                         // clique vindo do botão "Escolher foto do computador"
+  if (ehPC && temCamera) { e.preventDefault(); abrirWebcam(); }
+});
+
+async function salvarFoto(imagem, tipo) {
+  const item = { fotoId: novoId(), devId: dev.id, tipo: tipo || tipoAtual, imagem: imagem, criadaEm: Date.now(), tentativas: 0, estado: 'pendente', erro: '' };
+  await fila.salvar(item);
+  minhas.unshift({ fotoId: item.fotoId, devId: item.devId, tipo: item.tipo, mini: await miniatura(imagem), estado: 'pendente', msg: 'na fila' });
+  desenharTipos(); desenharGaleria();
+}
 $('camera').onchange = async e => {
   const arquivos = Array.prototype.slice.call(e.target.files || []); e.target.value = '';
   for (const f of arquivos) {
-    try {
-      const imagem = await reduzir(f);
-      const item = { fotoId: novoId(), devId: dev.id, tipo: tipoAtual, imagem: imagem, criadaEm: Date.now(), tentativas: 0, estado: 'pendente', erro: '' };
-      await fila.salvar(item);
-      minhas.unshift({ fotoId: item.fotoId, devId: item.devId, tipo: item.tipo, mini: await miniatura(imagem), estado: 'pendente', msg: 'na fila' });
-      desenharTipos(); desenharGaleria();
-    } catch (err) { alert('Não consegui preparar a foto: ' + (err.message || err)); }
+    try { await salvarFoto(await reduzir(f)); }
+    catch (err) { alert('Não consegui preparar a foto: ' + (err.message || err)); }
   }
   processarFila();
 };
@@ -627,8 +717,73 @@ async function terminar() {
 function duracaoTxt(s) { s = Math.round(Number(s) || 0); return s ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : 'vídeo'; }
 
 // =====================================================================
+// WEBCAM DO NOTEBOOK — várias fotos em sequência, sem sair da câmera
+// =====================================================================
+let streamWeb = null, fotosWeb = 0, capturando = false;
+function erroWeb(m) { $('webErro').innerHTML = m; $('webErro').classList.toggle('oculto', !m); }
+function desenharTiposWeb() {
+  if (!dev) return;
+  const et = ETAPAS[etapa];
+  $('tiposWeb').innerHTML = et.tipos ? chipsTipos(et) : '';
+  $('wTipo').textContent = (et.nome || '') + ' · ' + tipoAtual;
+  $('webContagem').textContent = tipoAtual + (fotosWeb ? ' · ' + fotosWeb + ' tirada(s) agora' : '');
+}
+async function iniciarStreamWeb() {
+  if (streamWeb) { streamWeb.getTracks().forEach(t => t.stop()); streamWeb = null; }
+  $('btnCapturar').disabled = true; erroWeb('');
+  try {
+    streamWeb = await obterStream(false, { width: { ideal: 1920 }, height: { ideal: 1080 } });
+    const v = $('videoWeb'); v.srcObject = streamWeb; await v.play();
+    $('btnCapturar').disabled = false;
+    preencherCameras($('selCamWeb'), streamWeb);
+  } catch (e) {
+    erroWeb('<b>Webcam indisponível.</b>' + msgCameraNegada(e) + ' Você também pode escolher uma foto do computador.');
+  }
+}
+async function abrirWebcam() {
+  const et = ETAPAS[etapa];
+  if (!et.tipos) return;
+  tela('Webcam');
+  $('wId').textContent = dev.id;
+  fotosWeb = 0;
+  desenharTiposWeb();
+  await iniciarStreamWeb();
+}
+function pararWebcam() {
+  if (streamWeb) { streamWeb.getTracks().forEach(t => t.stop()); streamWeb = null; }
+  const v = $('videoWeb'); if (v) v.srcObject = null;
+}
+async function capturarWebcam() {
+  const v = $('videoWeb');
+  if (capturando || !streamWeb || !v.videoWidth) return;
+  capturando = true;
+  try {
+    const k = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    const imagem = c.toDataURL('image/jpeg', 0.82);
+    const fl = $('flashWeb'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 80);
+    fotosWeb++;
+    await salvarFoto(imagem, tipoAtual);
+    desenharTiposWeb();
+    processarFila();
+  } catch (err) { erroWeb('<b>Não consegui salvar a foto.</b>' + esc(err.message || '')); }
+  finally { capturando = false; }
+}
+$('btnCapturar').onclick = capturarWebcam;
+$('tiposWeb').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { tipoAtual = b.dataset.t; desenharTiposWeb(); desenharTipos(); } });
+$('selCamWeb').onchange = async e => { salvarCam(e.target.value); await iniciarStreamWeb(); };
+$('btnWebArquivo').onclick = () => $('camera').click();
+$('btnWebFechar').onclick = () => { tela('Fotos'); irEtapa(etapa); };
+document.addEventListener('keydown', e => {
+  if ($('telaWebcam').classList.contains('oculto')) return;
+  if ((e.code === 'Space' || e.key === 'Enter') && !/^(BUTTON|SELECT|INPUT|TEXTAREA)$/.test(e.target.tagName)) { e.preventDefault(); capturarWebcam(); }
+});
+
+// =====================================================================
 // VÍDEO DA ABERTURA — gravado no próprio app (720p, ~1 Mbps de vídeo + áudio opcional, até 3 min).
 // A câmera nativa grava 100 MB+ por minuto; por isso ela fica só como alternativa.
+// No notebook usa a webcam (e o microfone, se houver).
 // =====================================================================
 const VIDEO_MAX_S = 180;
 let streamVid = null, gravador = null, pedacos = [], inicioGrav = 0, timerGrav = null, videoPronto = null, travaTela = null;
@@ -638,21 +793,25 @@ function mimeVideo() {
   return c.filter(t => MediaRecorder.isTypeSupported(t))[0] || '';
 }
 function erroVideo(m) { $('videoErro').innerHTML = m; $('videoErro').classList.toggle('oculto', !m); }
+async function iniciarStreamVideo() {
+  if (streamVid) { streamVid.getTracks().forEach(t => t.stop()); streamVid = null; }
+  const video = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } };
+  try { streamVid = await obterStream(true, video); }
+  catch (e) { streamVid = await obterStream(false, video); }     // sem microfone: grava só a imagem
+  const v = $('videoGrav'); v.srcObject = streamVid; await v.play();
+  preencherCameras($('selCamVid'), streamVid);
+}
 async function abrirGravacao() {
-  if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('videoNativo').click(); return; }
+  if (!window.MediaRecorder || !temCamera) { $('videoNativo').click(); return; }
   tela('Video');
   $('vId').textContent = dev.id;
   erroVideo(''); videoPronto = null;
   $('videoRev').classList.add('oculto'); $('videoGrav').classList.remove('oculto');
   $('revBts').classList.add('oculto'); $('btnGravar').classList.remove('oculto', 'parar'); $('btnGravarTxt').textContent = '● COMEÇAR A GRAVAR';
   $('recInd').classList.add('oculto');
-  try {
-    const video = { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } };
-    try { streamVid = await navigator.mediaDevices.getUserMedia({ video: video, audio: true }); }
-    catch (e) { streamVid = await navigator.mediaDevices.getUserMedia({ video: video, audio: false }); }     // sem microfone: grava só a imagem
-    const v = $('videoGrav'); v.srcObject = streamVid; await v.play();
-  } catch (e) {
-    erroVideo('<b>Câmera indisponível.</b>Permita a câmera para este site ou use "Usar a câmera do celular".');
+  try { await iniciarStreamVideo(); }
+  catch (e) {
+    erroVideo('<b>Câmera indisponível.</b>' + msgCameraNegada(e) + ' Depois, volte e toque em "' + $('txtVideoNativo').textContent + '" se preferir.');
   }
 }
 function comecarGravacao() {
@@ -665,6 +824,7 @@ function comecarGravacao() {
   gravador.onstop = fimGravacao;
   gravador.start(1000);
   inicioGrav = Date.now();
+  $('vSelBox').classList.add('oculto');                          // não dá para trocar de câmera no meio da gravação
   $('recInd').classList.remove('oculto'); $('recTempo').textContent = '0:00';
   $('btnGravar').classList.add('parar'); $('btnGravarTxt').textContent = '■ PARAR';
   $('btnCancelarVideo').classList.add('oculto');
@@ -707,6 +867,11 @@ async function guardarVideo(blob, mime, duracao) {
   processarFila();
 }
 $('btnAbrirGravacao').onclick = abrirGravacao;
+$('selCamVid').onchange = async e => {
+  if (gravador && gravador.state === 'recording') return;
+  salvarCam(e.target.value);
+  try { erroVideo(''); await iniciarStreamVideo(); } catch (err) { erroVideo('<b>Câmera indisponível.</b>' + msgCameraNegada(err)); }
+};
 $('btnGravar').onclick = () => { if (gravador && gravador.state === 'recording') pararGravando(); else comecarGravacao(); };
 $('btnRegravar').onclick = () => { $('videoDica').textContent = 'Enquadre a caixa fechada. Toque em COMEÇAR e abra devagar, mostrando a fita sendo cortada, a proteção e o produto.'; abrirGravacao(); };
 $('btnUsarVideo').onclick = () => { if (videoPronto) { const v = videoPronto; videoPronto = null; guardarVideo(v.blob, v.mime, v.duracao); } };
@@ -762,7 +927,7 @@ async function processarFila() {
       if (r.status === 'ok') {
         await fila.remover(item.fotoId); try { localStorage.removeItem('dc_dev_prog_' + item.fotoId); } catch (x) {}
         marcar(item.fotoId, 'enviada', 'enviada');
-        if (dev && r.id === dev.id) { dev.fotos = r.fotos; dev.fotosFaltando = r.fotosFaltando; if ($('telaFotos').classList.contains('oculto') === false) desenharTipos(); }
+        if (dev && r.id === dev.id) { dev.fotos = r.fotos; dev.fotosFaltando = r.fotosFaltando; if ($('telaFotos').classList.contains('oculto') === false || $('telaWebcam').classList.contains('oculto') === false) desenharTipos(); }
         if (navigator.vibrate) navigator.vibrate(40);
       } else if (r.codigo === 'pin') {
         marcar(item.fotoId, 'pendente', 'aguardando login');
